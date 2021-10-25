@@ -84,7 +84,9 @@ defaultRootNode =
 defaultQuestions : TraversalList Question
 defaultQuestions =
     TraversalList.make
-        [ { text = "hi", answer = Nothing }
+        [ { text = "1", answer = Nothing }
+        , { text = "2", answer = Nothing }
+        , { text = "3", answer = Nothing }
         ]
 
 
@@ -153,8 +155,8 @@ view shared model =
         UI.with shared
             [ el [ centerX, padding 4, Border.color (rgb255 0 0 0), Border.width 1 ] <| viewEl model
             , row [ centerX, spacing 8 ]
-                [ UI.button "mald" NextQuestion
-                , UI.button "unmald" PreviousQuestion
+                [ UI.button True "unmald" PreviousQuestion
+                , UI.button True "mald" NextQuestion
                 ]
             , el [ centerX ] <|
                 case TraversalList.current model.questions of
@@ -199,6 +201,8 @@ viewNode model node =
                  else
                     rgb255 0 0 0
                 )
+            , Border.color <| rgb255 100 100 100
+            , Border.widthEach { edges | left = 2 }
             , padding 6
             , pointer
             , onClick (NodeClicked <| nID node)

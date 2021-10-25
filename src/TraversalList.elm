@@ -35,7 +35,7 @@ rec a =
 
 make : List a -> TraversalList a
 make list =
-    TraversalList { before = [], after = list, current = BeforeList }
+    TraversalList { before = [], after = (list), current = BeforeList }
 
 
 current : TraversalList a -> Pos a
