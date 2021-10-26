@@ -30,8 +30,9 @@ page shared _ =
 
 type alias Model =
     { rootNode : Node
-    , selectedNode : Maybe String
+    , selectedNode : List String
     , questions : TraversalList Question
+    , taskStarted : Bool
     }
 
 
@@ -45,20 +46,23 @@ type Node
 
 type alias Question =
     { text : String
-    , answer : Maybe String
+    , answer : List String
     }
 
 
+mkNode : String -> String -> List Node -> Node
 mkNode id label children =
     Node { id = id, label = label, children = children }
 
 
+nLabel : Node -> String
 nLabel node =
     case node of
         Node { label } ->
             label
 
 
+nChildren : Node -> List Node
 nChildren node =
     case node of
         Node { children } ->
@@ -72,27 +76,33 @@ nID node =
             id
 
 
+defaultRootNode : Node
 defaultRootNode =
     mkNode "homepage"
         "Homepage"
-        [ mkNode "homepage-shop" "Shop" []
-        , mkNode "homepage-settings" "Settings" []
-        , mkNode "homepage-profile" "Profile" []
+        [ mkNode "shop" "Shop" []
+        , mkNode "settings" "Settings" []
+        , mkNode "account"
+            "My Account"
+            [ mkNode "upgrade" "Upgrade my plan" []
+            , mkNode "profile" "Profile" []
+            , mkNode "balance" "Account balance" []
+            ]
         ]
 
 
 defaultQuestions : TraversalList Question
 defaultQuestions =
     TraversalList.make
-        [ { text = "1", answer = Nothing }
-        , { text = "2", answer = Nothing }
-        , { text = "3", answer = Nothing }
+        [ { text = "Buy a jar.", answer = [] }
+        , { text = "Check to see how to make the website gay.", answer = [] }
+        , { text = "Update your name on the website.", answer = [] }
         ]
 
 
 init : ( Model, Cmd Msg )
 init =
-    ( Model defaultRootNode Nothing defaultQuestions, Cmd.none )
+    ( Model defaultRootNode [] defaultQuestions False, Cmd.none )
 
 
 
@@ -100,12 +110,13 @@ init =
 
 
 type Msg
-    = NodeClicked String
+    = NodeClicked (List String)
     | NextQuestion
     | PreviousQuestion
+    | StartTask
 
 
-updateQ : Maybe String -> Question -> Question
+updateQ : List String -> Question -> Question
 updateQ mayhaps q =
     { q | answer = mayhaps }
 
@@ -115,24 +126,47 @@ update msg model =
     let
         updatedList =
             TraversalList.updateCurrent (updateQ model.selectedNode) model.questions
+
+        currAns list =
+            case TraversalList.toMaybe (TraversalList.current list) of
+                Just a ->
+                    a.answer
+
+                _ ->
+                    []
     in
     case msg of
         NodeClicked node ->
-            ( { model | selectedNode = Just node }, Cmd.none )
+            ( { model | selectedNode = node }, Cmd.none )
 
         NextQuestion ->
             let
                 newList =
                     TraversalList.next updatedList
             in
-            ( { model | questions = newList, selectedNode = Maybe.andThen (\q -> q.answer) (TraversalList.toMaybe (TraversalList.current newList)) }, Cmd.none )
+            ( { model
+                | taskStarted = False
+                , questions = newList
+                , selectedNode = currAns newList
+              }
+            , Cmd.none
+            )
 
         PreviousQuestion ->
             let
                 newList =
                     TraversalList.previous updatedList
             in
-            ( { model | questions = newList, selectedNode = Maybe.andThen (\q -> q.answer) (TraversalList.toMaybe (TraversalList.current newList)) }, Cmd.none )
+            ( { model
+                | taskStarted = False
+                , questions = newList
+                , selectedNode = currAns newList
+              }
+            , Cmd.none
+            )
+
+        StartTask ->
+            ( { model | taskStarted = True }, Cmd.none )
 
 
 
@@ -148,26 +182,78 @@ subscriptions _ =
 -- VIEW
 
 
+par : String -> Element msg
+par txt =
+    paragraph [] [ text txt ]
+
+
+preTask : Model -> Element Msg
+preTask _ =
+    textColumn [ spacing 10, padding 24 ]
+        [ el [ Font.bold ] (text "Welcome")
+        , par "This is a study for TODO."
+        , par "You will be asked to find an item that helps you with a given task from list of links."
+        , par "Click through it until you find an item that you think helps you complete the given task."
+        , par "If you make a wrong turn you can go back by clicking one of the links above."
+        , par "Remember, this isn't a test of your ability. There are no right or wrong answers."
+        , UI.button True "Get Started" NextQuestion
+        ]
+
+
+postTask : Model -> Element Msg
+postTask _ =
+    textColumn [ padding 24 ]
+        [ par "You're finished!"
+        , par "Thank you for participating in our study."
+        ]
+
+
+taskCount : { a | questions : TraversalList b } -> String
+taskCount model =
+    let
+        idx =
+            TraversalList.index model.questions + 1
+
+        count =
+            TraversalList.length model.questions
+    in
+    "Task " ++ String.fromInt idx ++ " of " ++ String.fromInt count
+
+
+header : { a | questions : TraversalList b } -> { c | text : String } -> Element msg
+header model question =
+    textColumn [ spacing 8 ]
+        [ el [ Font.bold ] (text <| taskCount model)
+        , text question.text
+        ]
+
+
+atTask : Model -> Question -> Element Msg
+atTask model question =
+    column [ width fill, padding 16, spacing 24 ]
+        [ header model question
+        , if model.taskStarted then
+            viewEl model
+
+          else
+            UI.button True "Start Task" StartTask
+        ]
+
+
 view : Shared.Model -> Model -> View Msg
 view shared model =
     { title = "Tree Test"
     , element =
         UI.with shared
-            [ el [ centerX, padding 4, Border.color (rgb255 0 0 0), Border.width 1 ] <| viewEl model
-            , row [ centerX, spacing 8 ]
-                [ UI.button True "unmald" PreviousQuestion
-                , UI.button True "mald" NextQuestion
-                ]
-            , el [ centerX ] <|
-                case TraversalList.current model.questions of
-                    TraversalList.AtItem question ->
-                        text question.text
+            [ case TraversalList.current model.questions of
+                TraversalList.AtItem question ->
+                    atTask model question
 
-                    TraversalList.AfterList ->
-                        text "You're done!"
+                TraversalList.AfterList ->
+                    postTask model
 
-                    TraversalList.BeforeList ->
-                        text "Press mald to get started."
+                TraversalList.BeforeList ->
+                    preTask model
             ]
     }
 
@@ -181,21 +267,21 @@ edges =
     }
 
 
-viewNode : Model -> Node -> Element Msg
-viewNode model node =
-    column
-        [ paddingEach { edges | left = 6 }
-        ]
-        [ row
-            [ Background.color
-                (if model.selectedNode == Just (nID node) then
+isPrefix : List a -> List a -> Bool
+isPrefix a b =
+    List.take (List.length a) b == a
+
+signifier model parents node myPath =
+    el
+        [ Background.color
+                (if model.selectedNode == myPath then
                     rgb255 0 0 0
 
                  else
                     rgb255 255 255 255
                 )
             , Font.color
-                (if model.selectedNode == Just (nID node) then
+                (if model.selectedNode == myPath then
                     rgb255 255 255 255
 
                  else
@@ -205,13 +291,43 @@ viewNode model node =
             , Border.widthEach { edges | left = 2 }
             , padding 6
             , pointer
-            , onClick (NodeClicked <| nID node)
+            , onClick (NodeClicked <| myPath)
+        ]
+        (text (node |> nLabel))
+
+viewNode : Model -> List String -> Node -> Element Msg
+viewNode model parents node =
+    let
+        myPath =
+            parents ++ [ nID node ]
+    in
+    column
+        [ paddingEach
+            { edges
+            | left = if parents == [] then
+                0
+            else
+                20
+            }
+        ]
+        [ row
+            [ spacing 20 ]
+            [ signifier model parents node myPath
+            , if myPath == model.selectedNode && List.length (node |> nChildren) == 0 then
+                UI.button True "I'd find it here" NextQuestion
+            else
+                none
             ]
-            [ text (node |> nLabel) ]
-        , column [] (node |> nChildren |> List.map (viewNode model))
+        , column []
+            (if isPrefix myPath model.selectedNode then
+                (node |> nChildren |> List.map (viewNode model <| myPath))
+            else
+                [])
         ]
 
 
 viewEl : Model -> Element Msg
 viewEl model =
-    row [] [ viewNode model model.rootNode ]
+    column [ spacing 10 ]
+        [ viewNode model [] model.rootNode
+        ]

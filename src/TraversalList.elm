@@ -1,4 +1,4 @@
-module TraversalList exposing (Pos(..), TraversalList, current, make, map, next, previous, toList, updateCurrent, toMaybe)
+module TraversalList exposing (Pos(..), TraversalList, current, make, map, next, previous, toList, updateCurrent, toMaybe, length, index)
 
 import Html exposing (a)
 
@@ -25,6 +25,29 @@ type TraversalList a
         , current : Pos a
         }
 
+index : TraversalList a -> Int
+index tlist =
+    let
+        list =
+            rec tlist
+    in
+    List.length list.before
+
+length : TraversalList a -> Int
+length tlist =
+    let
+        list =
+            rec tlist
+
+        size =
+            case list.current of
+                AtItem _ ->
+                    1
+
+                _ ->
+                    0
+    in
+    List.length list.before + size + List.length list.after
 
 rec : TraversalList a -> { before : List a, after : List a, current : Pos a }
 rec a =

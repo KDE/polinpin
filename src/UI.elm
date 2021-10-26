@@ -26,6 +26,7 @@ viewLink label route =
         }
 
 
+button : Bool -> String -> msg -> Element msg
 button enabled label msg =
     Input.button
         [ if enabled then
@@ -40,5 +41,5 @@ button enabled label msg =
             [ Background.color <| rgb255 100 100 200 ]
         ]
         { onPress = Just msg
-        , label = text label
+        , label = el [ centerX ] (text label)
         }
