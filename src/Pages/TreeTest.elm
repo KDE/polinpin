@@ -12,7 +12,8 @@ import Shared
 import TraversalList exposing (TraversalList)
 import UI
 import View exposing (View)
-
+import Time
+import Task
 
 page : Shared.Model -> Request.With Params -> Page.With Model Msg
 page shared _ =
@@ -33,6 +34,8 @@ type alias Model =
     , selectedNode : List String
     , questions : TraversalList Question
     , taskStarted : Bool
+    , currentlyObserving : Maybe IncompleteObservation
+    , observations : List Observation
     }
 
 
@@ -46,9 +49,34 @@ type Node
 
 type alias Question =
     { text : String
+    , correctAnswer : List String
     , answer : List String
     }
 
+type alias PastSelection =
+    { node : List String
+    , at : Time.Posix
+    }
+
+type alias Observation =
+    { question : Question
+    , pastSelections : List PastSelection
+    , startedAt : Time.Posix
+    , endedAt : Time.Posix
+    }
+
+type alias IncompleteObservation =
+    { question : Question
+    , pastSelections : List PastSelection
+    , startedAt : Time.Posix
+    }
+
+completeObservation incomplete newQuestion endedAt =
+    Observation
+        newQuestion
+        incomplete.pastSelections
+        incomplete.startedAt
+        endedAt
 
 mkNode : String -> String -> List Node -> Node
 mkNode id label children =
@@ -94,15 +122,22 @@ defaultRootNode =
 defaultQuestions : TraversalList Question
 defaultQuestions =
     TraversalList.make
-        [ { text = "Buy a jar.", answer = [] }
-        , { text = "Check to see how to make the website gay.", answer = [] }
-        , { text = "Update your name on the website.", answer = [] }
+        [ Question "Buy a jar." ["homepage", "shop"] []
+        , Question "Check to see how to make the website gay." ["homepage", "settings"] []
+        , Question "Update your name on the website." ["homepage", "account", "profile"] []
         ]
 
 
 init : ( Model, Cmd Msg )
 init =
-    ( Model defaultRootNode [] defaultQuestions False, Cmd.none )
+    ( Model
+        defaultRootNode
+        []
+        defaultQuestions
+        False
+        Nothing
+        []
+    , Cmd.none )
 
 
 
@@ -112,14 +147,22 @@ init =
 type Msg
     = NodeClicked (List String)
     | NextQuestion
-    | PreviousQuestion
     | StartTask
+    | Timestamped Msg Time.Posix
 
 
 updateQ : List String -> Question -> Question
 updateQ mayhaps q =
     { q | answer = mayhaps }
 
+maybeAppend : List a -> Maybe a -> List a
+maybeAppend list maybe =
+    case maybe of
+        Just a ->
+            list ++ [a]
+
+        _ ->
+            list
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
@@ -136,37 +179,64 @@ update msg model =
                     []
     in
     case msg of
-        NodeClicked node ->
-            ( { model | selectedNode = node }, Cmd.none )
+        Timestamped StartTask timestamp ->
+            let
+                currentlyObserving =
+                    TraversalList.current model.questions
+                    |> TraversalList.toMaybe
+                    |> Maybe.map (\v -> IncompleteObservation v [] timestamp)
+            in
+            ( { model
+                | taskStarted = True
+                , currentlyObserving = currentlyObserving
+              }, Cmd.none
+            )
 
-        NextQuestion ->
+        Timestamped NextQuestion timestamp ->
             let
                 newList =
                     TraversalList.next updatedList
+
+                mald : Time.Posix -> IncompleteObservation -> Question -> Observation
+                mald time incomplete question =
+                    completeObservation incomplete question time
+
+                finishedObservation =
+                    Maybe.map2 (mald timestamp)
+                        (model.currentlyObserving)
+                        (TraversalList.toMaybe <| TraversalList.current updatedList)
+
+                newObservations =
+                    maybeAppend model.observations finishedObservation
             in
             ( { model
                 | taskStarted = False
+                , observations = newObservations
                 , questions = newList
                 , selectedNode = currAns newList
               }
             , Cmd.none
             )
 
-        PreviousQuestion ->
+        Timestamped (NodeClicked node) timestamp ->
             let
-                newList =
-                    TraversalList.previous updatedList
+                newObserving =
+                    model.currentlyObserving
+                    |> Maybe.map (\a -> { a | pastSelections = a.pastSelections ++ [PastSelection node timestamp] })
             in
-            ( { model
-                | taskStarted = False
-                , questions = newList
-                , selectedNode = currAns newList
-              }
-            , Cmd.none
-            )
+            ( { model | selectedNode = node, currentlyObserving = newObserving }, Cmd.none )
+
+        Timestamped _ _ ->
+            ( model, Cmd.none )
+
+        NodeClicked node ->
+            ( model, Task.perform (Timestamped (NodeClicked node)) Time.now)
+
+        NextQuestion ->
+            ( model, Task.perform (Timestamped NextQuestion) Time.now )
 
         StartTask ->
-            ( { model | taskStarted = True }, Cmd.none )
+            ( model, Task.perform (Timestamped StartTask) Time.now )
 
 
 
