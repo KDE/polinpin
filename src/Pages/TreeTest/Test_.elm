@@ -373,21 +373,7 @@ updateLoaded msg model =
         Timestamped _ _ ->
             ( model, Cmd.none )
 
-        GotTreeTest (Ok value) ->
-            let
-                _ =
-                    Debug.log "mald" value
-            in
-            ( model, Cmd.none )
-
-        GotTreeTest (Err (Http.BadBody body)) ->
-            let
-                _ =
-                    Debug.log body 1
-            in
-            ( model, Cmd.none )
-
-        GotTreeTest (Err _) ->
+        GotTreeTest _ ->
             ( model, Cmd.none )
 
         NodeClicked node ->
