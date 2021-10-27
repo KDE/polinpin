@@ -261,6 +261,24 @@ makeModel id treeTest =
         Sending
 
 
+errorToString : Http.Error -> String
+errorToString error =
+    case error of
+        Http.BadUrl url ->
+            "The URL " ++ url ++ " was invalid"
+        Http.Timeout ->
+            "Unable to reach the server, try again"
+        Http.NetworkError ->
+            "Unable to reach the server, check your network connection"
+        Http.BadStatus 500 ->
+            "The server had a problem, try again later"
+        Http.BadStatus 400 ->
+            "Verify your information and try again"
+        Http.BadStatus code ->
+            "Unknown error " ++ String.fromInt code
+        Http.BadBody errorMessage ->
+            errorMessage
+
 update : String -> Msg -> Model -> ( Model, Cmd Msg )
 update id msg model =
     case ( msg, model ) of
@@ -274,8 +292,8 @@ update id msg model =
         ( GotTreeTest (Ok test), Loading ) ->
             ( Loaded (makeModel id test), Cmd.none )
 
-        ( GotTreeTest (Err _), Loading ) ->
-            ( model, Cmd.none )
+        ( GotTreeTest (Err err), Loading ) ->
+            ( LoadingFailed err, Cmd.none )
 
         ( _, Loading ) ->
             ( model, Cmd.none )
@@ -428,8 +446,8 @@ postTask model =
             Sending ->
                 par "Sending results..."
 
-            Failed _ ->
-                par "Sending results failed!"
+            Failed err ->
+                par <| "Sending results failed! " ++ errorToString err
 
             Sent ->
                 par "Results sent!"
@@ -478,11 +496,11 @@ view shared model =
                     [ paragraph [ padding 24 ] [ text "Loading TreeTest..." ] ]
             }
 
-        LoadingFailed _ ->
+        LoadingFailed err ->
             { title = "Loading Failed"
             , element =
                 UI.with shared
-                    [ paragraph [ padding 24 ] [ text "Oh no, loading failed!" ] ]
+                    [ textColumn [ padding 24 ] [ par "Oh no, loading failed!", par <| errorToString err ] ]
             }
 
         Loaded it ->
