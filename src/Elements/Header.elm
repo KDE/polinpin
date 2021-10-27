@@ -32,5 +32,5 @@ view _ =
             [ alignLeft ]
             (text "the ux thing")
         , viewLink "home" Route.Home_
-        , viewLink "tree test" Route.TreeTest
+        , viewLink "tree test" (Route.TreeTest__Test_ { test = "demo" })
         ]
