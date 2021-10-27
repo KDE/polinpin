@@ -524,27 +524,33 @@ isPrefix a b =
 signifier : LoadedModel -> b -> Node -> List String -> Element Msg
 signifier model _ node myPath =
     el
-        [ Background.color
-            (if model.selectedNode == myPath then
-                rgb255 0 0 0
-
-             else
-                rgb255 255 255 255
-            )
-        , Font.color
-            (if model.selectedNode == myPath then
-                rgb255 255 255 255
-
-             else
-                rgb255 0 0 0
-            )
-        , Border.color <| rgb255 100 100 100
+        [ Border.color <| rgb255 0xD1 0xD5 0xD9
         , Border.widthEach { edges | left = 2 }
-        , padding 6
-        , pointer
-        , onClick (NodeClicked <| myPath)
+        , Border.dotted
+        , paddingEach { edges | left = 6, top = 2, bottom = 2 }
         ]
-        (text (node |> nLabel))
+    <|
+        el
+            [ Background.color
+                (if model.selectedNode == myPath then
+                    rgb255 0 146 126
+
+                 else
+                    rgb255 0xD1 0xD5 0xD9
+                )
+            , Font.color
+                (if model.selectedNode == myPath then
+                    rgb255 255 255 255
+
+                 else
+                    rgb255 0 0 0
+                )
+            , Border.rounded 20
+            , paddingXY 10 6
+            , pointer
+            , onClick (NodeClicked <| myPath)
+            ]
+            (text (node |> nLabel))
 
 
 viewNode : LoadedModel -> List String -> Node -> Element Msg

@@ -10,8 +10,7 @@ import Shared
 viewLink : String -> Route -> Element msg
 viewLink label route =
     link
-        [ Font.color (rgb255 150 150 255)
-        , Font.underline
+        [ Font.color (rgb255 0x8A 0xDC 0xFF)
         , alignRight
         ]
         { url = Route.toHref route
@@ -25,12 +24,15 @@ view _ =
         [ width fill
         , Background.color (rgb255 0 0 0)
         , Font.color (rgb255 255 255 255)
-        , padding 8
+        , padding 12
         , spacing 4
         ]
         [ el
             [ alignLeft ]
             (text "the ux thing")
-        , viewLink "home" Route.Home_
-        , viewLink "tree test" (Route.TreeTest__Test_ { test = "demo" })
+        , row
+            [ alignRight, spacing 20 ]
+            [ viewLink "home" Route.Home_
+            , viewLink "tree test" (Route.TreeTest__Test_ { test = "demo" })
+            ]
         ]
