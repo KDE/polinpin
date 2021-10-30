@@ -161,18 +161,32 @@ viewLoaded shared model =
         )
 
 
+edges =
+    { left = 0, top = 0, bottom = 0, right = 0 }
+
+
 viewNode : Node -> Element Msg
 viewNode (Node it children) =
-    column [ paddingEach { left = 8, top = 0, bottom = 0, right = 0 } ]
-        ([ row []
+    let
+        isEmpty =
+            List.length children == 0
+    in
+    column
+        [ paddingEach { edges | left = 20 }
+        , Border.color <| rgb255 0xD1 0xD5 0xD9
+        , Border.widthEach { edges | left = 2 }
+        , Border.dotted
+        , spacing 8
+        ]
+        (row [ spacing 4 ]
             [ Input.text []
                 { onChange = \str -> EditItem it.id str
                 , text = it.text
                 , placeholder = Nothing
                 , label = Input.labelHidden "node name"
                 }
-            , UI.button True "add child" (NewNode it.id)
+            , if isEmpty then UI.button True "add children" (NewNode it.id) else none
             ]
-         ]
-            ++ List.map viewNode children
+            :: (List.map viewNode children)
+            ++ [if not isEmpty then UI.button True "+" (NewNode it.id) else none]
         )
