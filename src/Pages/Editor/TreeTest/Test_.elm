@@ -89,11 +89,13 @@ init =
 type Msg
     = EditItem Tree.ID String
     | NewNode Tree.ID
+    | DeleteNode Tree.ID
     | TabClicked ActiveTab
     | NewTask
     | EditTaskText Int String
     | EditTaskAnswer Int Tree.ID
     | ShowTaskTree Int
+    | Save
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -147,6 +149,16 @@ updateLoaded msg model =
         EditItem id cont ->
             ( setRootNode model <| Tree.mapID id (\it -> { it | text = cont }) model.study.tree, Cmd.none )
 
+        DeleteNode id ->
+            ( { model
+                | study =
+                    { study
+                        | tree = study.tree |> Tree.delete id
+                    }
+              }
+            , Cmd.none
+            )
+
         NewNode id ->
             ( (setRootNode model <|
                 Tree.appendID id
@@ -196,6 +208,9 @@ updateLoaded msg model =
 
         ShowTaskTree idx ->
             ( { model | showingTaskTree = idx }, Cmd.none )
+
+        Save ->
+            Debug.todo "save"
 
 
 
@@ -269,11 +284,19 @@ viewTask model idx task =
             , placeholder = Nothing
             , label = Input.labelAbove [ Font.size 16 ] (text "Task text")
             }
+        , el [ Font.size 16 ] (text "Task answer")
         , if model.showingTaskTree == idx then
             viewTaskNode idx task model.study.tree
 
           else
-            UI.button True "Set Correct Answer" (ShowTaskTree idx)
+            row [ width fill ]
+                [ let
+                    (Tree.ID id) =
+                        task.correctAnswer
+                  in
+                  el [ width fill ] (text id)
+                , UI.button True "Change" (ShowTaskTree idx)
+                ]
         ]
 
 
@@ -365,6 +388,7 @@ viewHeader model =
         , width fill
         ]
         [ text <| "Editing " ++ model.study.name
+        , el [ alignRight ] (UI.button True "Save" Save)
         ]
 
 
@@ -398,6 +422,7 @@ viewNode (Tree.Node id data children) =
 
               else
                 none
+            , UI.destructiveButton True "delete" (DeleteNode id)
             ]
             :: List.map viewNode children
             ++ [ if not isEmpty then

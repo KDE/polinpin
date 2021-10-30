@@ -1,4 +1,4 @@
-module Tree exposing (ID(..), Node(..), map, mapID, appendID, makeLeaf)
+module Tree exposing (ID(..), Node(..), map, mapID, appendID, makeLeaf, delete)
 
 
 type ID
@@ -11,6 +11,14 @@ type Node a
 makeLeaf : ID -> a -> Node a
 makeLeaf id cont =
     Node id cont []
+
+delete : ID -> Node a -> Node a
+delete id (Node nid ndata nchildren) =
+    let
+        filter (Node compID _ _) =
+            not (compID == id)
+    in
+    Node nid ndata (List.map (delete id) (List.filter filter nchildren))
 
 map : (a -> b) -> Node a -> Node b
 map f (Node id data children) =
