@@ -271,7 +271,8 @@ viewTask model idx task =
             }
         , if model.showingTaskTree == idx then
             viewTaskNode idx task model.study.tree
-        else
+
+          else
             UI.button True "Set Correct Answer" (ShowTaskTree idx)
         ]
 
@@ -287,25 +288,30 @@ viewTaskNode idx task (Tree.Node nID nData nChildren) =
         ]
         (row [ spacing 4 ]
             [ el
-                [ Background.color
+                ([ Background.color
                     (if nID == task.correctAnswer then
                         rgb255 0 146 126
 
                      else
                         rgb255 0xD1 0xD5 0xD9
                     )
-                , Font.color
+                 , Font.color
                     (if nID == task.correctAnswer then
                         rgb255 255 255 255
 
                      else
                         rgb255 0 0 0
                     )
-                , Border.rounded 20
-                , paddingXY 10 6
-                , pointer
-                , onClick (EditTaskAnswer idx nID)
-                ]
+                 , Border.rounded 20
+                 , paddingXY 10 6
+                 ]
+                    ++ (if List.length nChildren > 0 then
+                            [ alpha 0.5 ]
+
+                        else
+                            [ pointer, onClick (EditTaskAnswer idx nID) ]
+                       )
+                )
                 (text nData.text)
             ]
             :: List.map (viewTaskNode idx task) nChildren
