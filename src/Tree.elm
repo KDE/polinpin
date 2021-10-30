@@ -1,4 +1,7 @@
-module Tree exposing (ID(..), Node(..), map, mapID, appendID, makeLeaf, delete)
+module Tree exposing (ID(..), Node(..), appendID, delete, encodeNode, makeLeaf, map, mapID, nodeDecoder)
+
+import Json.Decode as D
+import Json.Encode as E
 
 
 type ID
@@ -8,9 +11,34 @@ type ID
 type Node a
     = Node ID a (List (Node a))
 
+
+encodeNode : (a -> E.Value) -> Node a -> E.Value
+encodeNode f (Node (ID id) content children) =
+    E.object
+        [ ( "id", E.string id )
+        , ( "content", f content )
+        , ( "children", E.list (encodeNode f) children )
+        ]
+
+
+nodeDecoder : D.Decoder a -> D.Decoder (Node a)
+nodeDecoder contentDecoder =
+    D.map3 Node
+        (D.field "id" D.string |> D.map ID)
+        (D.field "content" contentDecoder)
+        (D.field "children"
+            (D.oneOf
+                [ D.null []
+                , D.list (D.lazy (\_ -> nodeDecoder contentDecoder))
+                ]
+            )
+        )
+
+
 makeLeaf : ID -> a -> Node a
 makeLeaf id cont =
     Node id cont []
+
 
 delete : ID -> Node a -> Node a
 delete id (Node nid ndata nchildren) =
@@ -20,9 +48,11 @@ delete id (Node nid ndata nchildren) =
     in
     Node nid ndata (List.map (delete id) (List.filter filter nchildren))
 
+
 map : (a -> b) -> Node a -> Node b
 map f (Node id data children) =
     Node id (f data) (List.map (map f) children)
+
 
 mapID : ID -> (a -> a) -> Node a -> Node a
 mapID targetID f (Node id data children) =
@@ -35,6 +65,7 @@ mapID targetID f (Node id data children) =
                 nData
     in
     Node id (mapOne id data) (List.map (mapID targetID f) children)
+
 
 appendID : ID -> Node a -> Node a -> Node a
 appendID id newNode appendUnder =
