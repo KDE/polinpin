@@ -7,8 +7,12 @@ import (
 
 type Node struct {
 	ID       string `json:"id"`
-	Label    string `json:"label"`
+	Content  Item   `json:"content"`
 	Children []Node `json:"children"`
+}
+
+type Item struct {
+	Label string `json:"label"`
 }
 
 type Question struct {
@@ -24,7 +28,7 @@ type TreeTest struct {
 func mkNode(id, label string, children ...Node) Node {
 	return Node{
 		ID:       id,
-		Label:    label,
+		Content:  Item{label},
 		Children: children,
 	}
 }

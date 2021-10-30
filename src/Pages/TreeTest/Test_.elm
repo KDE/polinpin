@@ -15,6 +15,7 @@ import Shared
 import Task
 import Time
 import TraversalList exposing (TraversalList)
+import Tree
 import UI
 import Url exposing (Protocol(..))
 import View exposing (View)
@@ -41,7 +42,7 @@ type Model
 
 
 type alias LoadedModel =
-    { rootNode : Node
+    { rootNode : Tree.Node Item
     , selectedNode : List String
     , questions : TraversalList Question
     , taskStarted : Bool
@@ -59,7 +60,7 @@ type SendingState
 
 
 type alias TreeTest =
-    { node : Node
+    { node : Tree.Node Item
     , questions : List Question
     }
 
@@ -67,20 +68,19 @@ type alias TreeTest =
 deserializeTreeTest : D.Decoder TreeTest
 deserializeTreeTest =
     D.map2 TreeTest
-        (D.field "node" deserializeNode)
+        (D.field "node" (Tree.nodeDecoder deserializeItem))
         (D.field "question" (D.list deserializeQuestion))
 
 
-type Node
-    = Node
-        { label : String
-        , id : String
-        , children : List Node
-        }
+type alias Item =
+    { label : String
+    }
 
 
-type alias Mald =
-    { label : String, id : String, children : List Node }
+deserializeItem : D.Decoder Item
+deserializeItem =
+    D.map Item
+        (D.field "label" D.string)
 
 
 getRootNodeForTest : String -> Cmd Msg
@@ -98,21 +98,6 @@ sendResults id obs =
         , body = Http.jsonBody (E.list serializeObservation obs)
         , expect = Http.expectWhatever ResultsSent
         }
-
-
-deserializeNode : D.Decoder Node
-deserializeNode =
-    D.map Node <|
-        D.map3 Mald
-            (D.field "label" D.string)
-            (D.field "id" D.string)
-            (D.field "children"
-                (D.oneOf
-                    [ D.null []
-                    , D.list (D.lazy (\_ -> deserializeNode))
-                    ]
-                )
-            )
 
 
 type alias Question =
@@ -194,27 +179,6 @@ completeObservation incomplete newQuestion endedAt =
         endedAt
 
 
-nLabel : Node -> String
-nLabel node =
-    case node of
-        Node { label } ->
-            label
-
-
-nChildren : Node -> List Node
-nChildren node =
-    case node of
-        Node { children } ->
-            children
-
-
-nID : Node -> String
-nID node =
-    case node of
-        Node { id } ->
-            id
-
-
 init : String -> ( Model, Cmd Msg )
 init id =
     ( Loading, getRootNodeForTest id )
@@ -266,18 +230,25 @@ errorToString error =
     case error of
         Http.BadUrl url ->
             "The URL " ++ url ++ " was invalid"
+
         Http.Timeout ->
             "Unable to reach the server, try again"
+
         Http.NetworkError ->
             "Unable to reach the server, check your network connection"
+
         Http.BadStatus 500 ->
             "The server had a problem, try again later"
+
         Http.BadStatus 400 ->
             "Verify your information and try again"
+
         Http.BadStatus code ->
             "Unknown error " ++ String.fromInt code
+
         Http.BadBody errorMessage ->
             errorMessage
+
 
 update : String -> Msg -> Model -> ( Model, Cmd Msg )
 update id msg model =
@@ -525,8 +496,8 @@ isPrefix a b =
     List.take (List.length a) b == a
 
 
-signifier : LoadedModel -> b -> Node -> List String -> Element Msg
-signifier model _ node myPath =
+signifier : LoadedModel -> b -> Tree.Node Item -> List String -> Element Msg
+signifier model _ (Tree.Node (Tree.ID id) cont children) myPath =
     el
         [ Border.color <| rgb255 0xD1 0xD5 0xD9
         , Border.widthEach { edges | left = 2 }
@@ -554,14 +525,14 @@ signifier model _ node myPath =
             , pointer
             , onClick (NodeClicked <| myPath)
             ]
-            (text (node |> nLabel))
+            (text cont.label)
 
 
-viewNode : LoadedModel -> List String -> Node -> Element Msg
-viewNode model parents node =
+viewNode : LoadedModel -> List String -> Tree.Node Item -> Element Msg
+viewNode model parents ((Tree.Node (Tree.ID id) _ children) as node) =
     let
         myPath =
-            parents ++ [ nID node ]
+            parents ++ [ id ]
     in
     column
         [ paddingEach
@@ -577,7 +548,7 @@ viewNode model parents node =
         [ row
             [ spacing 20 ]
             [ signifier model parents node myPath
-            , if myPath == model.selectedNode && List.length (node |> nChildren) == 0 then
+            , if myPath == model.selectedNode && List.length children == 0 then
                 UI.button True "I'd find it here" NextQuestion
 
               else
@@ -585,7 +556,7 @@ viewNode model parents node =
             ]
         , column []
             (if isPrefix myPath model.selectedNode then
-                node |> nChildren |> List.map (viewNode model <| myPath)
+                List.map (viewNode model <| myPath) children
 
              else
                 []
