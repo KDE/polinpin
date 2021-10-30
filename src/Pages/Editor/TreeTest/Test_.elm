@@ -10,8 +10,10 @@ import Gen.Params.Editor.TreeTest.Test_ exposing (Params)
 import Page
 import Request
 import Shared
+import Tree
 import UI
 import View exposing (View)
+
 
 page : Shared.Model -> Request.With Params -> Page.With Model Msg
 page shared req =
@@ -32,65 +34,36 @@ type Model
     | Loading
     | Failed
 
+
 type ActiveTab
     = EditTree
     | EditTasks
+
 
 type alias LoadedModel =
     { study : Study
     , count : Int
     , activeTab : ActiveTab
+    , showingTaskTree : Int
     }
+
 
 type alias Study =
-    { tree : Node
+    { tree : Tree.Node Item
     , name : String
+    , tasks : List Task
     }
-
-type Node
-    = Node Item (List Node)
 
 
 type alias Item =
-    { id : String
-    , text : String
+    { text : String
     }
 
 
-map : (Item -> Item) -> Node -> Node
-map f (Node item children) =
-    Node (f item) (List.map (map f) children)
-
-
-updateByID : String -> (Item -> Item) -> Item -> Item
-updateByID id f item =
-    if item.id == id then
-        f item
-
-    else
-        item
-
-
-mapByID : String -> (Item -> Item) -> Node -> Node
-mapByID id f node =
-    map (updateByID id f) node
-
-
-appendByID : String -> Node -> Node -> Node
-appendByID id new replaceIn =
-    let
-        f =
-            \(Node n children) ->
-                if n.id == id then
-                    Node n (children ++ [ new ])
-
-                else
-                    Node n children
-
-        (Node nid replaced) =
-            f replaceIn
-    in
-    Node nid (List.map (appendByID id new) replaced)
+type alias Task =
+    { text : String
+    , correctAnswer : Tree.ID
+    }
 
 
 
@@ -101,11 +74,12 @@ init : ( Model, Cmd Msg )
 init =
     let
         defaultStudy =
-            { tree = Node (Item "hi" "hoi?") []
+            { tree = Tree.Node (Tree.ID "hi") (Item "hoi?") []
             , name = "Example Treetest Study"
+            , tasks = []
             }
     in
-    ( Loaded (LoadedModel defaultStudy 0 EditTree), Cmd.none )
+    ( Loaded (LoadedModel defaultStudy 0 EditTree -1), Cmd.none )
 
 
 
@@ -113,9 +87,13 @@ init =
 
 
 type Msg
-    = EditItem String String
-    | NewNode String
+    = EditItem Tree.ID String
+    | NewNode Tree.ID
     | TabClicked ActiveTab
+    | NewTask
+    | EditTaskText Int String
+    | EditTaskAnswer Int Tree.ID
+    | ShowTaskTree Int
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -131,30 +109,93 @@ update msg model =
         _ ->
             ( model, Cmd.none )
 
-setRootNode : LoadedModel -> Node -> LoadedModel
+
+setRootNode : LoadedModel -> Tree.Node Item -> LoadedModel
 setRootNode model node =
     let
-        study
-            = model.study
+        study =
+            model.study
     in
-    { model | study = { study | tree = node }}
+    { model | study = { study | tree = node } }
+
 
 incrementCount : LoadedModel -> LoadedModel
 incrementCount model =
     { model | count = model.count + 1 }
 
+
+updateIndex : (b -> b) -> Int -> List b -> List b
+updateIndex f index list =
+    List.indexedMap
+        (\idx old ->
+            if idx == index then
+                f old
+
+            else
+                old
+        )
+        list
+
+
 updateLoaded : Msg -> LoadedModel -> ( LoadedModel, Cmd Msg )
 updateLoaded msg model =
+    let
+        study =
+            model.study
+    in
     case msg of
         EditItem id cont ->
-            ( setRootNode model <| mapByID id (\it -> { it | text = cont }) model.study.tree, Cmd.none )
+            ( setRootNode model <| Tree.mapID id (\it -> { it | text = cont }) model.study.tree, Cmd.none )
 
         NewNode id ->
-            ( (setRootNode model <| appendByID id (Node (Item (String.fromInt model.count) "") []) model.study.tree)
-              |> incrementCount, Cmd.none )
+            ( (setRootNode model <|
+                Tree.appendID id
+                    (Tree.makeLeaf
+                        (Tree.ID <| String.fromInt model.count)
+                        (Item "")
+                    )
+                    model.study.tree
+              )
+                |> incrementCount
+            , Cmd.none
+            )
 
         TabClicked id ->
             ( { model | activeTab = id }, Cmd.none )
+
+        NewTask ->
+            ( { model
+                | study =
+                    { study
+                        | tasks = study.tasks ++ [ Task "" (Tree.ID "") ]
+                    }
+              }
+            , Cmd.none
+            )
+
+        EditTaskText idx text ->
+            ( { model
+                | study =
+                    { study
+                        | tasks = updateIndex (\task -> { task | text = text }) idx study.tasks
+                    }
+              }
+            , Cmd.none
+            )
+
+        EditTaskAnswer idx ans ->
+            ( { model
+                | study =
+                    { study
+                        | tasks = updateIndex (\task -> { task | correctAnswer = ans }) idx study.tasks
+                    }
+                , showingTaskTree = -1
+              }
+            , Cmd.none
+            )
+
+        ShowTaskTree idx ->
+            ( { model | showingTaskTree = idx }, Cmd.none )
 
 
 
@@ -187,28 +228,112 @@ viewLoaded shared model =
             [ column [ width fill, spacing 0 ]
                 [ viewHeader model
                 , viewTabs model
-                , el [ padding 16 ] (viewNode model.study.tree)
+                , el [ padding 16 ]
+                    (case model.activeTab of
+                        EditTree ->
+                            viewNode model.study.tree
+
+                        EditTasks ->
+                            viewTasks model
+                    )
                 ]
             ]
         )
+
+
+viewTasks : LoadedModel -> Element Msg
+viewTasks model =
+    column
+        [ spacing 8 ]
+        (List.indexedMap (viewTask model) model.study.tasks
+            ++ [ UI.button True "New Task" NewTask
+               ]
+        )
+
+
+viewTask : LoadedModel -> Int -> Task -> Element Msg
+viewTask model idx task =
+    column
+        [ padding 8
+        , Background.color <| rgb255 0xEE 0xF1 0xF5
+        , Border.color <| rgb255 0x9B 0x9E 0xA2
+        , Border.width 1
+        , Border.rounded 6
+        , width fill
+        , spacing 8
+        ]
+        [ Input.text
+            []
+            { onChange = EditTaskText idx
+            , text = task.text
+            , placeholder = Nothing
+            , label = Input.labelAbove [ Font.size 16 ] (text "Task text")
+            }
+        , if model.showingTaskTree == idx then
+            viewTaskNode idx task model.study.tree
+        else
+            UI.button True "Set Correct Answer" (ShowTaskTree idx)
+        ]
+
+
+viewTaskNode : Int -> Task -> Tree.Node Item -> Element Msg
+viewTaskNode idx task (Tree.Node nID nData nChildren) =
+    column
+        [ paddingEach { edges | left = 10 }
+        , Border.color <| rgb255 0xD1 0xD5 0xD9
+        , Border.widthEach { edges | left = 2 }
+        , Border.dotted
+        , spacing 8
+        ]
+        (row [ spacing 4 ]
+            [ el
+                [ Background.color
+                    (if nID == task.correctAnswer then
+                        rgb255 0 146 126
+
+                     else
+                        rgb255 0xD1 0xD5 0xD9
+                    )
+                , Font.color
+                    (if nID == task.correctAnswer then
+                        rgb255 255 255 255
+
+                     else
+                        rgb255 0 0 0
+                    )
+                , Border.rounded 20
+                , paddingXY 10 6
+                , pointer
+                , onClick (EditTaskAnswer idx nID)
+                ]
+                (text nData.text)
+            ]
+            :: List.map (viewTaskNode idx task) nChildren
+        )
+
 
 tab : String -> Bool -> Msg -> Element Msg
 tab label active onClicked =
     el
         [ paddingXY 10 8
-        , Border.roundEach { bottomLeft = 4, bottomRight = 4, topLeft = 0, topRight = 0}
-        , Background.color <| if active then
-            rgb255 0x03 0x66 0x88
-        else
-            rgb255 0xd1 0xd5 0xd9
-        , Font.color <| if active then
-            rgb255 0xff 0xff 0xff
-        else
-            rgb255 0x00 0x00 0x00
+        , Border.roundEach { bottomLeft = 4, bottomRight = 4, topLeft = 0, topRight = 0 }
+        , Background.color <|
+            if active then
+                rgb255 0x03 0x66 0x88
+
+            else
+                rgb255 0xD1 0xD5 0xD9
+        , Font.color <|
+            if active then
+                rgb255 0xFF 0xFF 0xFF
+
+            else
+                rgb255 0x00 0x00 0x00
         , onClick onClicked
         , pointer
         ]
         (text label)
+
 
 viewTabs : LoadedModel -> Element Msg
 viewTabs model =
@@ -224,6 +349,7 @@ viewTabs model =
     row [ paddingEach { edges | left = 8 }, spacing 6 ]
         roles
 
+
 viewHeader : LoadedModel -> Element Msg
 viewHeader model =
     row
@@ -235,13 +361,14 @@ viewHeader model =
         [ text <| "Editing " ++ model.study.name
         ]
 
+
 edges : { left : number, top : number, bottom : number, right : number }
 edges =
     { left = 0, top = 0, bottom = 0, right = 0 }
 
 
-viewNode : Node -> Element Msg
-viewNode (Node it children) =
+viewNode : Tree.Node Item -> Element Msg
+viewNode (Tree.Node id data children) =
     let
         isEmpty =
             List.length children == 0
@@ -255,13 +382,22 @@ viewNode (Node it children) =
         ]
         (row [ spacing 4 ]
             [ Input.text []
-                { onChange = \str -> EditItem it.id str
-                , text = it.text
+                { onChange = \str -> EditItem id str
+                , text = data.text
                 , placeholder = Nothing
                 , label = Input.labelHidden "node name"
                 }
-            , if isEmpty then UI.button True "add children" (NewNode it.id) else none
+            , if isEmpty then
+                UI.button True "add children" (NewNode id)
+
+              else
+                none
             ]
-            :: (List.map viewNode children)
-            ++ [if not isEmpty then UI.button True "+" (NewNode it.id) else none]
+            :: List.map viewNode children
+            ++ [ if not isEmpty then
+                    UI.button True "+" (NewNode id)
+
+                 else
+                    none
+               ]
         )
