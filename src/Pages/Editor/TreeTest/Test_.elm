@@ -13,7 +13,6 @@ import Shared
 import UI
 import View exposing (View)
 
-
 page : Shared.Model -> Request.With Params -> Page.With Model Msg
 page shared req =
     Page.element
@@ -33,12 +32,20 @@ type Model
     | Loading
     | Failed
 
+type ActiveTab
+    = EditTree
+    | EditTasks
 
 type alias LoadedModel =
-    { rootNode : Node
+    { study : Study
     , count : Int
+    , activeTab : ActiveTab
     }
 
+type alias Study =
+    { tree : Node
+    , name : String
+    }
 
 type Node
     = Node Item (List Node)
@@ -92,7 +99,13 @@ appendByID id new replaceIn =
 
 init : ( Model, Cmd Msg )
 init =
-    ( Loaded (LoadedModel (Node (Item "hi" "hoi?") []) 0), Cmd.none )
+    let
+        defaultStudy =
+            { tree = Node (Item "hi" "hoi?") []
+            , name = "Example Treetest Study"
+            }
+    in
+    ( Loaded (LoadedModel defaultStudy 0 EditTree), Cmd.none )
 
 
 
@@ -102,6 +115,7 @@ init =
 type Msg
     = EditItem String String
     | NewNode String
+    | TabClicked ActiveTab
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -117,15 +131,30 @@ update msg model =
         _ ->
             ( model, Cmd.none )
 
+setRootNode : LoadedModel -> Node -> LoadedModel
+setRootNode model node =
+    let
+        study
+            = model.study
+    in
+    { model | study = { study | tree = node }}
+
+incrementCount : LoadedModel -> LoadedModel
+incrementCount model =
+    { model | count = model.count + 1 }
 
 updateLoaded : Msg -> LoadedModel -> ( LoadedModel, Cmd Msg )
 updateLoaded msg model =
     case msg of
         EditItem id cont ->
-            ( { model | rootNode = mapByID id (\it -> { it | text = cont }) model.rootNode }, Cmd.none )
+            ( setRootNode model <| mapByID id (\it -> { it | text = cont }) model.study.tree, Cmd.none )
 
         NewNode id ->
-            ( { model | rootNode = appendByID id (Node (Item (String.fromInt model.count) "") []) model.rootNode, count = model.count + 1 }, Cmd.none )
+            ( (setRootNode model <| appendByID id (Node (Item (String.fromInt model.count) "") []) model.study.tree)
+              |> incrementCount, Cmd.none )
+
+        TabClicked id ->
+            ( { model | activeTab = id }, Cmd.none )
 
 
 
@@ -155,12 +184,58 @@ viewLoaded : Shared.Model -> LoadedModel -> View Msg
 viewLoaded shared model =
     View "Editing..."
         (UI.with shared
-            [ column [ width fill, padding 16, spacing 24 ]
-                [ viewNode model.rootNode ]
+            [ column [ width fill, spacing 0 ]
+                [ viewHeader model
+                , viewTabs model
+                , el [ padding 16 ] (viewNode model.study.tree)
+                ]
             ]
         )
 
+tab : String -> Bool -> Msg -> Element Msg
+tab label active onClicked =
+    el
+        [ paddingXY 10 8
+        , Border.roundEach { bottomLeft = 4, bottomRight = 4, topLeft = 0, topRight = 0}
+        , Background.color <| if active then
+            rgb255 0x03 0x66 0x88
+        else
+            rgb255 0xd1 0xd5 0xd9
+        , Font.color <| if active then
+            rgb255 0xff 0xff 0xff
+        else
+            rgb255 0x00 0x00 0x00
+        , onClick onClicked
+        , pointer
+        ]
+        (text label)
 
+viewTabs : LoadedModel -> Element Msg
+viewTabs model =
+    let
+        make label role =
+            tab label (model.activeTab == role) (TabClicked role)
+
+        roles =
+            [ make "Tree" EditTree
+            , make "Tasks" EditTasks
+            ]
+    in
+    row [ paddingEach { edges | left = 8 }, spacing 6 ]
+        roles
+
+viewHeader : LoadedModel -> Element Msg
+viewHeader model =
+    row
+        [ padding 24
+        , Background.color <| rgb255 0x03 0x66 0x88
+        , Font.color <| rgb255 255 255 255
+        , width fill
+        ]
+        [ text <| "Editing " ++ model.study.name
+        ]
+
+edges : { left : number, top : number, bottom : number, right : number }
 edges =
     { left = 0, top = 0, bottom = 0, right = 0 }
 

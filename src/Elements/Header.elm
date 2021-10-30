@@ -22,7 +22,7 @@ view : Shared.Model -> Element msg
 view _ =
     row
         [ width fill
-        , Background.color (rgb255 0 0 0)
+        , Background.color (rgb255 0x00 0x37 0x56)
         , Font.color (rgb255 255 255 255)
         , padding 12
         , spacing 4
