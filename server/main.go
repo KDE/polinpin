@@ -12,17 +12,18 @@ type Node struct {
 }
 
 type Item struct {
-	Label string `json:"label"`
+	Label string `json:"text"`
 }
 
-type Question struct {
-	Text          string   `json:"text"`
-	CorrectAnswer []string `json:"correctAnswer"`
+type Study struct {
+	Name  string `json:"name"`
+	Tasks []Task `json:"tasks"`
+	Tree  Node   `json:"tree"`
 }
 
-type TreeTest struct {
-	Node      Node       `json:"node"`
-	Questions []Question `json:"question"`
+type Task struct {
+	Text          string `json:"text"`
+	CorrectAnswer string `json:"correctAnswer"`
 }
 
 func mkNode(id, label string, children ...Node) Node {
@@ -33,8 +34,8 @@ func mkNode(id, label string, children ...Node) Node {
 	}
 }
 
-func mkQuestion(text string, answer ...string) Question {
-	return Question{
+func mkQuestion(text string, answer string) Task {
+	return Task{
 		Text:          text,
 		CorrectAnswer: answer,
 	}
@@ -51,24 +52,39 @@ func main() {
 			mkNode("profile", "Profile"),
 			mkNode("balance", "Account balance")))
 
-	var defQuestions = []Question{
-		mkQuestion("Buy a jar.", "homepage", "shop"),
-		mkQuestion("Make the website gay.", "homepage", "settings"),
-		mkQuestion("Change your name.", "homepage", "account", "profile"),
+	var defQuestions = []Task{
+		mkQuestion("Buy a jar.", "shop"),
+		mkQuestion("Make the website gay.", "settings"),
+		mkQuestion("Change your name.", "profile"),
 	}
 
-	var defTest = TreeTest{
-		Node:      def,
-		Questions: defQuestions,
+	var defStudy = Study{
+		Name:  "Example Study",
+		Tasks: defQuestions,
+		Tree:  def,
 	}
 
 	app.Use(cors.New())
 
+	data := map[string]Study{}
+	data["demo"] = defStudy
+
 	app.Get("/tree-test/:id", func(c *fiber.Ctx) error {
-		return c.JSON(defTest)
+		v, ok := data[c.Params("id")]
+		if !ok {
+			return fiber.ErrNotFound
+		}
+		return c.JSON(v)
 	})
 	app.Post("/completed/tree-test/:id", func(c *fiber.Ctx) error {
 		return nil
+	})
+	app.Get("/editor/tree-test/:id", func(c *fiber.Ctx) error {
+		v, ok := data[c.Params("id")]
+		if !ok {
+			return fiber.ErrNotFound
+		}
+		return c.JSON(v)
 	})
 
 	app.Listen(":25727")

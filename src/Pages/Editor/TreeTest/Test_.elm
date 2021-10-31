@@ -7,10 +7,13 @@ import Element.Events exposing (..)
 import Element.Font as Font
 import Element.Input as Input
 import Gen.Params.Editor.TreeTest.Test_ exposing (Params)
+import Json.Decode as D
+import Json.Encode as E
 import Page
 import Request
 import Shared
 import Tree
+import TreeTest
 import UI
 import View exposing (View)
 
@@ -41,28 +44,10 @@ type ActiveTab
 
 
 type alias LoadedModel =
-    { study : Study
+    { study : TreeTest.Study
     , count : Int
     , activeTab : ActiveTab
     , showingTaskTree : Int
-    }
-
-
-type alias Study =
-    { tree : Tree.Node Item
-    , name : String
-    , tasks : List Task
-    }
-
-
-type alias Item =
-    { text : String
-    }
-
-
-type alias Task =
-    { text : String
-    , correctAnswer : Tree.ID
     }
 
 
@@ -74,7 +59,7 @@ init : ( Model, Cmd Msg )
 init =
     let
         defaultStudy =
-            { tree = Tree.Node (Tree.ID "hi") (Item "hoi?") []
+            { tree = Tree.Node (Tree.ID "hi") (TreeTest.Item "hoi?") []
             , name = "Example Treetest Study"
             , tasks = []
             }
@@ -112,7 +97,7 @@ update msg model =
             ( model, Cmd.none )
 
 
-setRootNode : LoadedModel -> Tree.Node Item -> LoadedModel
+setRootNode : LoadedModel -> Tree.Node TreeTest.Item -> LoadedModel
 setRootNode model node =
     let
         study =
@@ -164,7 +149,7 @@ updateLoaded msg model =
                 Tree.appendID id
                     (Tree.makeLeaf
                         (Tree.ID <| String.fromInt model.count)
-                        (Item "")
+                        (TreeTest.Item "")
                     )
                     model.study.tree
               )
@@ -179,7 +164,7 @@ updateLoaded msg model =
             ( { model
                 | study =
                     { study
-                        | tasks = study.tasks ++ [ Task "" (Tree.ID "") ]
+                        | tasks = study.tasks ++ [ TreeTest.Task "" (Tree.ID "") ]
                     }
               }
             , Cmd.none
@@ -266,7 +251,7 @@ viewTasks model =
         )
 
 
-viewTask : LoadedModel -> Int -> Task -> Element Msg
+viewTask : LoadedModel -> Int -> TreeTest.Task -> Element Msg
 viewTask model idx task =
     column
         [ padding 8
@@ -300,7 +285,7 @@ viewTask model idx task =
         ]
 
 
-viewTaskNode : Int -> Task -> Tree.Node Item -> Element Msg
+viewTaskNode : Int -> TreeTest.Task -> Tree.Node TreeTest.Item -> Element Msg
 viewTaskNode idx task (Tree.Node nID nData nChildren) =
     column
         [ paddingEach { edges | left = 10 }
@@ -397,7 +382,7 @@ edges =
     { left = 0, top = 0, bottom = 0, right = 0 }
 
 
-viewNode : Tree.Node Item -> Element Msg
+viewNode : Tree.Node TreeTest.Item -> Element Msg
 viewNode (Tree.Node id data children) =
     let
         isEmpty =

@@ -16,6 +16,7 @@ import Task
 import Time
 import TraversalList exposing (TraversalList)
 import Tree
+import TreeTest
 import UI
 import Url exposing (Protocol(..))
 import View exposing (View)
@@ -42,9 +43,9 @@ type Model
 
 
 type alias LoadedModel =
-    { rootNode : Tree.Node Item
-    , selectedNode : List String
-    , questions : TraversalList Question
+    { rootNode : Tree.Node TreeTest.Item
+    , selectedNode : Tree.ID
+    , questions : TraversalList AnsweredTask
     , taskStarted : Bool
     , currentlyObserving : Maybe IncompleteObservation
     , observations : List Observation
@@ -59,35 +60,11 @@ type SendingState
     | Sent
 
 
-type alias TreeTest =
-    { node : Tree.Node Item
-    , questions : List Question
-    }
-
-
-deserializeTreeTest : D.Decoder TreeTest
-deserializeTreeTest =
-    D.map2 TreeTest
-        (D.field "node" (Tree.nodeDecoder deserializeItem))
-        (D.field "question" (D.list deserializeQuestion))
-
-
-type alias Item =
-    { label : String
-    }
-
-
-deserializeItem : D.Decoder Item
-deserializeItem =
-    D.map Item
-        (D.field "label" D.string)
-
-
 getRootNodeForTest : String -> Cmd Msg
 getRootNodeForTest id =
     Http.get
         { url = "http://127.0.0.1:25727/tree-test/" ++ id
-        , expect = Http.expectJson GotTreeTest deserializeTreeTest
+        , expect = Http.expectJson GotTreeTest TreeTest.studyDecoder
         }
 
 
@@ -100,21 +77,20 @@ sendResults id obs =
         }
 
 
-type alias Question =
-    { text : String
-    , correctAnswer : List String
-    , answer : List String
+type alias AnsweredTask =
+    { task : TreeTest.Task
+    , answer : Tree.ID
     }
 
 
 type alias PastSelection =
-    { node : List String
+    { node : Tree.ID
     , at : Time.Posix
     }
 
 
 type alias Observation =
-    { question : Question
+    { question : AnsweredTask
     , pastSelections : List PastSelection
     , startedAt : Time.Posix
     , endedAt : Time.Posix
@@ -122,7 +98,7 @@ type alias Observation =
 
 
 type alias IncompleteObservation =
-    { question : Question
+    { question : AnsweredTask
     , pastSelections : List PastSelection
     , startedAt : Time.Posix
     }
@@ -133,29 +109,26 @@ serializeTime time =
     Time.posixToMillis time |> E.int
 
 
-serializeQuestion : Question -> E.Value
-serializeQuestion question =
+serializeAnsweredTask : AnsweredTask -> E.Value
+serializeAnsweredTask answered =
+    let
+        (Tree.ID id) =
+            answered.answer
+    in
     E.object
-        [ ( "text", E.string question.text )
-        , ( "correctAnswer", E.list E.string question.correctAnswer )
-        , ( "answer", E.list E.string question.answer )
+        [ ( "task", TreeTest.encodeTask answered.task )
+        , ( "answer", E.string id )
         ]
-
-
-deserializeQuestion : D.Decoder Question
-deserializeQuestion =
-    D.map3 Question
-        (D.field "text" D.string)
-        (D.field "correctAnswer" (D.list D.string))
-        (D.maybe (D.field "answer" (D.list D.string))
-            |> D.map (Maybe.withDefault [])
-        )
 
 
 serializePastSelection : PastSelection -> E.Value
 serializePastSelection selection =
+    let
+        (Tree.ID id) =
+            selection.node
+    in
     E.object
-        [ ( "node", E.list E.string selection.node )
+        [ ( "node", E.string id )
         , ( "at", serializeTime selection.at )
         ]
 
@@ -163,14 +136,14 @@ serializePastSelection selection =
 serializeObservation : Observation -> E.Value
 serializeObservation observation =
     E.object
-        [ ( "question", serializeQuestion observation.question )
+        [ ( "question", serializeAnsweredTask observation.question )
         , ( "pastSelections", E.list serializePastSelection observation.pastSelections )
         , ( "startedAt", serializeTime observation.startedAt )
         , ( "endedAt", serializeTime observation.endedAt )
         ]
 
 
-completeObservation : IncompleteObservation -> Question -> Time.Posix -> Observation
+completeObservation : IncompleteObservation -> AnsweredTask -> Time.Posix -> Observation
 completeObservation incomplete newQuestion endedAt =
     Observation
         newQuestion
@@ -189,17 +162,12 @@ init id =
 
 
 type Msg
-    = NodeClicked (List String)
+    = NodeClicked Tree.ID
     | NextQuestion
     | StartTask
     | Timestamped Msg Time.Posix
-    | GotTreeTest (Result Http.Error TreeTest)
+    | GotTreeTest (Result Http.Error TreeTest.Study)
     | ResultsSent (Result Http.Error ())
-
-
-updateQ : List String -> Question -> Question
-updateQ mayhaps q =
-    { q | answer = mayhaps }
 
 
 maybeAppend : List a -> Maybe a -> List a
@@ -212,12 +180,12 @@ maybeAppend list maybe =
             list
 
 
-makeModel : String -> TreeTest -> LoadedModel
+makeModel : String -> TreeTest.Study -> LoadedModel
 makeModel id treeTest =
     LoadedModel
-        treeTest.node
-        []
-        (TraversalList.make treeTest.questions)
+        treeTest.tree
+        (Tree.ID "")
+        (TraversalList.make (List.map (\it -> AnsweredTask it (Tree.ID "")) treeTest.tasks))
         False
         Nothing
         []
@@ -276,16 +244,21 @@ update id msg model =
 updateLoaded : Msg -> LoadedModel -> ( LoadedModel, Cmd Msg )
 updateLoaded msg model =
     let
+        updateQ : Tree.ID -> AnsweredTask -> AnsweredTask
+        updateQ answer question =
+            { question | answer = answer }
+
         updatedList =
             TraversalList.updateCurrent (updateQ model.selectedNode) model.questions
 
+        currAns : TraversalList AnsweredTask -> Tree.ID
         currAns list =
             case TraversalList.toMaybe (TraversalList.current list) of
                 Just a ->
                     a.answer
 
                 _ ->
-                    []
+                    Tree.ID ""
     in
     case msg of
         Timestamped StartTask timestamp ->
@@ -307,7 +280,7 @@ updateLoaded msg model =
                 newList =
                     TraversalList.next updatedList
 
-                mald : Time.Posix -> IncompleteObservation -> Question -> Observation
+                mald : Time.Posix -> IncompleteObservation -> AnsweredTask -> Observation
                 mald time incomplete question =
                     completeObservation incomplete question time
 
@@ -423,15 +396,15 @@ taskCount model =
     "Task " ++ String.fromInt idx ++ " of " ++ String.fromInt count
 
 
-header : { a | questions : TraversalList b } -> { c | text : String } -> Element msg
+header : LoadedModel -> AnsweredTask -> Element msg
 header model question =
     textColumn [ spacing 8 ]
         [ el [ Font.bold ] (text <| taskCount model)
-        , text question.text
+        , text question.task.text
         ]
 
 
-atTask : LoadedModel -> Question -> Element Msg
+atTask : LoadedModel -> AnsweredTask -> Element Msg
 atTask model question =
     column [ width fill, padding 16, spacing 24 ]
         [ header model question
@@ -491,13 +464,8 @@ edges =
     }
 
 
-isPrefix : List a -> List a -> Bool
-isPrefix a b =
-    List.take (List.length a) b == a
-
-
-signifier : LoadedModel -> b -> Tree.Node Item -> List String -> Element Msg
-signifier model _ (Tree.Node (Tree.ID id) cont children) myPath =
+signifier : LoadedModel -> Tree.Node TreeTest.Item -> Element Msg
+signifier model (Tree.Node id cont _) =
     el
         [ Border.color <| rgb255 0xD1 0xD5 0xD9
         , Border.widthEach { edges | left = 2 }
@@ -507,14 +475,14 @@ signifier model _ (Tree.Node (Tree.ID id) cont children) myPath =
     <|
         el
             [ Background.color
-                (if model.selectedNode == myPath then
+                (if model.selectedNode == id then
                     rgb255 0 146 126
 
                  else
                     rgb255 0xD1 0xD5 0xD9
                 )
             , Font.color
-                (if model.selectedNode == myPath then
+                (if model.selectedNode == id then
                     rgb255 255 255 255
 
                  else
@@ -523,22 +491,18 @@ signifier model _ (Tree.Node (Tree.ID id) cont children) myPath =
             , Border.rounded 20
             , paddingXY 10 6
             , pointer
-            , onClick (NodeClicked <| myPath)
+            , onClick (NodeClicked id)
             ]
-            (text cont.label)
+            (text cont.text)
 
 
-viewNode : LoadedModel -> List String -> Tree.Node Item -> Element Msg
-viewNode model parents ((Tree.Node (Tree.ID id) _ children) as node) =
-    let
-        myPath =
-            parents ++ [ id ]
-    in
+viewNode : LoadedModel -> Bool -> Tree.Node TreeTest.Item -> Element Msg
+viewNode model isRoot ((Tree.Node id _ children) as node) =
     column
         [ paddingEach
             { edges
                 | left =
-                    if parents == [] then
+                    if isRoot then
                         0
 
                     else
@@ -547,16 +511,16 @@ viewNode model parents ((Tree.Node (Tree.ID id) _ children) as node) =
         ]
         [ row
             [ spacing 20 ]
-            [ signifier model parents node myPath
-            , if myPath == model.selectedNode && List.length children == 0 then
+            [ signifier model node
+            , if id == model.selectedNode && List.length children == 0 then
                 UI.button True "I'd find it here" NextQuestion
 
               else
                 none
             ]
         , column []
-            (if isPrefix myPath model.selectedNode then
-                List.map (viewNode model <| myPath) children
+            (if Tree.containsID model.selectedNode node then
+                List.map (viewNode model False) children
 
              else
                 []
@@ -567,5 +531,5 @@ viewNode model parents ((Tree.Node (Tree.ID id) _ children) as node) =
 viewEl : LoadedModel -> Element Msg
 viewEl model =
     column [ spacing 10 ]
-        [ viewNode model [] model.rootNode
+        [ viewNode model True model.rootNode
         ]

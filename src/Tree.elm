@@ -1,4 +1,4 @@
-module Tree exposing (ID(..), Node(..), appendID, delete, encodeNode, makeLeaf, map, mapID, nodeDecoder)
+module Tree exposing (ID(..), Node(..), appendID, delete, encodeNode, makeLeaf, map, mapID, nodeDecoder, any, containsID)
 
 import Json.Decode as D
 import Json.Encode as E
@@ -11,6 +11,13 @@ type ID
 type Node a
     = Node ID a (List (Node a))
 
+any : (a -> Bool) -> Node a -> Bool
+any f (Node _ content children) =
+    (f content) || (List.any (any f) children)
+
+containsID : ID -> Node a -> Bool
+containsID compID (Node id _ children) =
+    (compID == id) || (List.any (containsID compID) children)
 
 encodeNode : (a -> E.Value) -> Node a -> E.Value
 encodeNode f (Node (ID id) content children) =
