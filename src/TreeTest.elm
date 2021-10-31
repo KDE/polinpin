@@ -3,7 +3,7 @@ module TreeTest exposing (..)
 import Json.Decode as D
 import Json.Encode as E
 import Tree
-
+import Http
 
 type alias Study =
     { tree : Tree.Node Item
@@ -70,3 +70,10 @@ encodeItem { text } =
     E.object
         [ ( "text", E.string text )
         ]
+
+getStudy : String -> (Result Http.Error Study -> msg) -> Cmd msg
+getStudy id f =
+    Http.get
+        { url = "http://127.0.0.1:25727/tree-test/" ++ id
+        , expect = Http.expectJson f studyDecoder
+        }

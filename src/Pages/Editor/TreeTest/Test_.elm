@@ -7,6 +7,7 @@ import Element.Events exposing (..)
 import Element.Font as Font
 import Element.Input as Input
 import Gen.Params.Editor.TreeTest.Test_ exposing (Params)
+import Http
 import Json.Decode as D
 import Json.Encode as E
 import Page
@@ -16,12 +17,13 @@ import Tree
 import TreeTest
 import UI
 import View exposing (View)
+import HTTPExt
 
 
 page : Shared.Model -> Request.With Params -> Page.With Model Msg
 page shared req =
     Page.element
-        { init = init
+        { init = init req.params.test
         , update = update
         , view = view shared
         , subscriptions = subscriptions
@@ -35,7 +37,7 @@ page shared req =
 type Model
     = Loaded LoadedModel
     | Loading
-    | Failed
+    | Failed Http.Error
 
 
 type ActiveTab
@@ -55,16 +57,9 @@ type alias LoadedModel =
 -- INIT
 
 
-init : ( Model, Cmd Msg )
-init =
-    let
-        defaultStudy =
-            { tree = Tree.Node (Tree.ID "hi") (TreeTest.Item "hoi?") []
-            , name = "Example Treetest Study"
-            , tasks = []
-            }
-    in
-    ( Loaded (LoadedModel defaultStudy 0 EditTree -1), Cmd.none )
+init : String -> ( Model, Cmd Msg )
+init id =
+    ( Loading, TreeTest.getStudy id GotStudy )
 
 
 
@@ -80,12 +75,19 @@ type Msg
     | EditTaskText Int String
     | EditTaskAnswer Int Tree.ID
     | ShowTaskTree Int
+    | GotStudy (Result Http.Error TreeTest.Study)
     | Save
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case ( msg, model ) of
+        ( GotStudy (Ok study), _ ) ->
+            ( Loaded <| LoadedModel study 0 EditTree -1, Cmd.none )
+
+        ( GotStudy (Err error), _ ) ->
+            ( Failed error, Cmd.none )
+
         ( _, Loaded m ) ->
             let
                 ( new, cmd ) =
@@ -197,6 +199,9 @@ updateLoaded msg model =
         Save ->
             Debug.todo "save"
 
+        _ ->
+            ( model, Cmd.none )
+
 
 
 -- SUBSCRIPTIONS
@@ -217,9 +222,22 @@ view shared model =
         Loaded m ->
             viewLoaded shared m
 
-        _ ->
-            View.placeholder "not loaded"
+        Loading ->
+            viewLoading shared
 
+        Failed error ->
+            viewError shared error
+
+
+viewLoading : Shared.Model -> View Msg
+viewLoading shared =
+    View "Loading..."
+        (UI.with shared [])
+
+viewError : Shared.Model -> Http.Error -> View Msg
+viewError shared error =
+    View "Error!"
+        (UI.with shared [text <| HTTPExt.errorToString error])
 
 viewLoaded : Shared.Model -> LoadedModel -> View Msg
 viewLoaded shared model =

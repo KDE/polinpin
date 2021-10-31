@@ -20,6 +20,7 @@ import TreeTest
 import UI
 import Url exposing (Protocol(..))
 import View exposing (View)
+import HTTPExt
 
 
 page : Shared.Model -> Request.With Params -> Page.With Model Msg
@@ -58,14 +59,6 @@ type SendingState
     = Sending
     | Failed Http.Error
     | Sent
-
-
-getRootNodeForTest : String -> Cmd Msg
-getRootNodeForTest id =
-    Http.get
-        { url = "http://127.0.0.1:25727/tree-test/" ++ id
-        , expect = Http.expectJson GotTreeTest TreeTest.studyDecoder
-        }
 
 
 sendResults : String -> List Observation -> Cmd Msg
@@ -154,7 +147,7 @@ completeObservation incomplete newQuestion endedAt =
 
 init : String -> ( Model, Cmd Msg )
 init id =
-    ( Loading, getRootNodeForTest id )
+    ( Loading, TreeTest.getStudy id GotTreeTest )
 
 
 
@@ -191,31 +184,6 @@ makeModel id treeTest =
         []
         id
         Sending
-
-
-errorToString : Http.Error -> String
-errorToString error =
-    case error of
-        Http.BadUrl url ->
-            "The URL " ++ url ++ " was invalid"
-
-        Http.Timeout ->
-            "Unable to reach the server, try again"
-
-        Http.NetworkError ->
-            "Unable to reach the server, check your network connection"
-
-        Http.BadStatus 500 ->
-            "The server had a problem, try again later"
-
-        Http.BadStatus 400 ->
-            "Verify your information and try again"
-
-        Http.BadStatus code ->
-            "Unknown error " ++ String.fromInt code
-
-        Http.BadBody errorMessage ->
-            errorMessage
 
 
 update : String -> Msg -> Model -> ( Model, Cmd Msg )
@@ -377,7 +345,7 @@ postTask model =
                 par "Sending results..."
 
             Failed err ->
-                par <| "Sending results failed! " ++ errorToString err
+                par <| "Sending results failed! " ++ HTTPExt.errorToString err
 
             Sent ->
                 par "Results sent!"
@@ -430,7 +398,7 @@ view shared model =
             { title = "Loading Failed"
             , element =
                 UI.with shared
-                    [ textColumn [ padding 24 ] [ par "Oh no, loading failed!", par <| errorToString err ] ]
+                    [ textColumn [ padding 24 ] [ par "Oh no, loading failed!", par <| HTTPExt.errorToString err ] ]
             }
 
         Loaded it ->
