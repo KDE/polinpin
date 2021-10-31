@@ -487,12 +487,12 @@ viewNode model isRoot ((Tree.Node id _ children) as node) =
                 none
             ]
         , column []
-            (if Tree.containsID model.selectedNode node then
+            (if model.selectedNode == id then
                 List.map (viewNode model False) children
-
-             else
-                []
-            )
+            else
+                children
+                |> List.filter (Tree.containsID model.selectedNode)
+                |> List.map (viewNode model False))
         ]
 
 
