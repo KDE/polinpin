@@ -19,7 +19,7 @@ viewLink label route =
 
 
 view : Shared.Model -> Element msg
-view _ =
+view shared =
     row
         [ width fill
         , Background.color (rgb255 0x00 0x37 0x56)
@@ -29,10 +29,16 @@ view _ =
         ]
         [ el
             [ alignLeft ]
-            (text "the ux thing")
+            (text "polinpin")
         , row
             [ alignRight, spacing 20 ]
             [ viewLink "home" Route.Home_
             , viewLink "tree test" (Route.TreeTest__Test_ { test = "demo" })
+            , case shared.storage.user of
+                Just _ ->
+                    none
+
+                Nothing ->
+                    viewLink "login" (Route.Login)
             ]
         ]

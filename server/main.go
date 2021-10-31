@@ -1,6 +1,9 @@
 package main
 
 import (
+	"math/rand"
+	"time"
+
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
 )
@@ -26,6 +29,28 @@ type Task struct {
 	CorrectAnswer string `json:"correctAnswer"`
 }
 
+type User struct {
+	Name     string `json:"name"`
+	Username string `json:"username"`
+	Password string `json:"password"`
+}
+
+type LoginRequest struct {
+	Username string `json:"username"`
+	Password string `json:"password"`
+}
+
+type RegisterRequest struct {
+	Name     string `json:"name"`
+	Username string `json:"username"`
+	Password string `json:"password"`
+}
+
+type AccountResponse struct {
+	Name  string `json:"name"`
+	Token string `json:"token"`
+}
+
 func mkNode(id, label string, children ...Node) Node {
 	return Node{
 		ID:       id,
@@ -41,6 +66,19 @@ func mkQuestion(text string, answer string) Task {
 	}
 }
 
+func init() {
+	rand.Seed(time.Now().UnixNano())
+}
+
+var letterRunes = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
+
+func RandStringRunes(n int) string {
+	b := make([]rune, n)
+	for i := range b {
+		b[i] = letterRunes[rand.Intn(len(letterRunes))]
+	}
+	return string(b)
+}
 func main() {
 	app := fiber.New()
 
@@ -69,6 +107,11 @@ func main() {
 	data := map[string]Study{}
 	data["demo"] = defStudy
 
+	users := map[string]User{}
+	users["janet"] = User{"Janet Blackquill", "janet", "password"}
+
+	sessions := map[string]string{}
+
 	app.Get("/tree-test/:id", func(c *fiber.Ctx) error {
 		v, ok := data[c.Params("id")]
 		if !ok {
@@ -94,6 +137,41 @@ func main() {
 		}
 		data[c.Params("id")] = t
 		return nil
+	})
+	app.Post("/login", func(c *fiber.Ctx) error {
+		var r LoginRequest
+		err := c.BodyParser(&r)
+		if err != nil {
+			return err
+		}
+
+		u := users[r.Username]
+		// TODO: check if user exists
+		if u.Password != r.Password {
+			return fiber.ErrUnauthorized
+		}
+
+		sessions[r.Username] = RandStringRunes(30)
+
+		return c.JSON(AccountResponse{u.Name, sessions[r.Username]})
+	})
+	app.Post("/register", func(c *fiber.Ctx) error {
+		var r RegisterRequest
+		err := c.BodyParser(&r)
+		if err != nil {
+			return err
+		}
+
+		// TODO: check if user exists
+		users[r.Username] = User{
+			Name:     r.Name,
+			Username: r.Username,
+			Password: r.Password,
+		}
+
+		sessions[r.Username] = RandStringRunes(30)
+
+		return c.JSON(AccountResponse{r.Name, sessions[r.Username]})
 	})
 
 	app.Listen(":25727")

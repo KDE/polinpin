@@ -4,6 +4,7 @@ import Json.Decode as D
 import Json.Encode as E
 import Tree
 import Http
+import Web
 
 type alias Study =
     { tree : Tree.Node Item
@@ -74,14 +75,14 @@ encodeItem { text } =
 getStudy : String -> (Result Http.Error Study -> msg) -> Cmd msg
 getStudy id f =
     Http.get
-        { url = "http://127.0.0.1:25727/tree-test/" ++ id
+        { url = Web.host ++ "/tree-test/" ++ id
         , expect = Http.expectJson f studyDecoder
         }
 
 setStudy : String -> Study -> (Result Http.Error () -> msg) -> Cmd msg
 setStudy id study f =
     Http.post
-        { url = "http://127.0.0.1:25727/editor/tree-test/" ++ id
+        { url = Web.host ++ "/editor/tree-test/" ++ id
         , body = Http.jsonBody <| encodeStudy study
         , expect = Http.expectWhatever f
         }

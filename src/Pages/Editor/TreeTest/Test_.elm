@@ -24,12 +24,14 @@ import View exposing (View)
 
 page : Shared.Model -> Request.With Params -> Page.With Model Msg
 page shared req =
-    Page.element
-        { init = init req.params.test
-        , update = update req.params.test
-        , view = view shared
-        , subscriptions = subscriptions
-        }
+    Page.protected.element
+        (\_ ->
+            { init = init req.params.test
+            , update = update req.params.test
+            , view = view shared
+            , subscriptions = subscriptions
+            }
+        )
 
 
 
@@ -424,12 +426,7 @@ viewTabs model =
 
 viewHeader : LoadedModel -> Element Msg
 viewHeader model =
-    row
-        [ padding 24
-        , Background.color <| rgb255 0x03 0x66 0x88
-        , Font.color <| rgb255 255 255 255
-        , width fill
-        ]
+    UI.subToolbar
         [ text <| "Editing " ++ model.study.name
         , el [ alignRight ]
             (case model.saveNotificationState of

@@ -1,4 +1,4 @@
-module UI exposing (button, viewLink, with, destructiveButton)
+module UI exposing (button, destructiveButton, fontScaled, label, labelScaled, scaled, scaledInt, subToolbar, viewLink, with)
 
 import Element exposing (..)
 import Element.Background as Background
@@ -10,6 +10,31 @@ import Gen.Route as Route exposing (Route)
 import Shared
 
 
+scaled : Int -> Float
+scaled =
+    Element.modular 16 1.25
+
+
+scaledInt : Int -> Int
+scaledInt at =
+    round <| scaled at
+
+
+fontScaled : Int -> Attribute msg
+fontScaled at =
+    Font.size (scaled at |> round)
+
+
+label : List (Attribute msg) -> String -> Element msg
+label attrs str =
+    el attrs (text str)
+
+
+labelScaled : Int -> String -> Element msg
+labelScaled at =
+    label [ fontScaled at ]
+
+
 with : Shared.Model -> List (Element msg) -> Element msg
 with shared els =
     column
@@ -18,17 +43,17 @@ with shared els =
 
 
 viewLink : String -> Route -> Element msg
-viewLink label route =
+viewLink textLabel route =
     link
         [ Font.color (rgb255 0 0 255)
         ]
         { url = Route.toHref route
-        , label = text label
+        , label = text textLabel
         }
 
 
 button : Bool -> String -> msg -> Element msg
-button enabled label msg =
+button enabled textLabel msg =
     Input.button
         [ if enabled then
             Background.color <| rgb255 0xFF 0xE2 0x47
@@ -44,14 +69,15 @@ button enabled label msg =
             [ Background.color <| rgb255 0xC4 0xAB 0x00 ]
         ]
         { onPress = Just msg
-        , label = el [ centerX ] (text label)
+        , label = el [ centerX ] (text textLabel)
         }
 
+
 destructiveButton : Bool -> String -> msg -> Element msg
-destructiveButton enabled label msg =
+destructiveButton enabled textLabel msg =
     Input.button
         [ if enabled then
-            Background.color <| rgb255 0xe9 0x3d 0x58
+            Background.color <| rgb255 0xE9 0x3D 0x58
 
           else
             Background.color <| rgb255 100 100 100
@@ -59,10 +85,20 @@ destructiveButton enabled label msg =
         , paddingXY 10 6
         , Border.rounded 30
         , Element.focused
-            [ Background.color <| rgb255 0xbf 0x00 0x39 ]
+            [ Background.color <| rgb255 0xBF 0x00 0x39 ]
         , Element.mouseDown
-            [ Background.color <| rgb255 0x99 0x00 0x2e ]
+            [ Background.color <| rgb255 0x99 0x00 0x2E ]
         ]
         { onPress = Just msg
-        , label = el [ centerX ] (text label)
+        , label = el [ centerX ] (text textLabel)
         }
+
+
+subToolbar : List (Element msg) -> Element msg
+subToolbar =
+    row
+        [ padding 24
+        , Background.color <| rgb255 0x03 0x66 0x88
+        , Font.color <| rgb255 255 255 255
+        , width fill
+        ]
