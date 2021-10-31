@@ -7,6 +7,7 @@ import Element.Events exposing (..)
 import Element.Font as Font
 import Element.Input as Input
 import Gen.Params.Editor.TreeTest.Test_ exposing (Params)
+import HTTPExt
 import Http
 import Json.Decode as D
 import Json.Encode as E
@@ -17,7 +18,6 @@ import Tree
 import TreeTest
 import UI
 import View exposing (View)
-import HTTPExt
 
 
 page : Shared.Model -> Request.With Params -> Page.With Model Msg
@@ -234,10 +234,12 @@ viewLoading shared =
     View "Loading..."
         (UI.with shared [])
 
+
 viewError : Shared.Model -> Http.Error -> View Msg
 viewError shared error =
     View "Error!"
-        (UI.with shared [text <| HTTPExt.errorToString error])
+        (UI.with shared [ text <| HTTPExt.errorToString error ])
+
 
 viewLoaded : Shared.Model -> LoadedModel -> View Msg
 viewLoaded shared model =
@@ -292,12 +294,18 @@ viewTask model idx task =
             viewTaskNode idx task model.study.tree
 
           else
-            row [ width fill ]
+            row [ width fill, spacing 6 ]
                 [ let
-                    (Tree.ID id) =
-                        task.correctAnswer
+                    gText (Tree.Node _ cont _) =
+                        cont.text
+
+                    label =
+                        (Tree.nodeByIDWithParents task.correctAnswer model.study.tree)
+                            |> Debug.log "hm"
+                            |> Maybe.map (\(node, parents) -> (parents ++ [node]) |> List.map gText |> String.join " / ")
+                            |> Maybe.withDefault "Failed to find node"
                   in
-                  el [ width fill ] (text id)
+                  el [ width fill ] (text label)
                 , UI.button True "Change" (ShowTaskTree idx)
                 ]
         ]
