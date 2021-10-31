@@ -77,3 +77,11 @@ getStudy id f =
         { url = "http://127.0.0.1:25727/tree-test/" ++ id
         , expect = Http.expectJson f studyDecoder
         }
+
+setStudy : String -> Study -> (Result Http.Error () -> msg) -> Cmd msg
+setStudy id study f =
+    Http.post
+        { url = "http://127.0.0.1:25727/editor/tree-test/" ++ id
+        , body = Http.jsonBody <| encodeStudy study
+        , expect = Http.expectWhatever f
+        }

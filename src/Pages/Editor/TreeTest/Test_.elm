@@ -12,8 +12,10 @@ import Http
 import Json.Decode as D
 import Json.Encode as E
 import Page
+import Process
 import Request
 import Shared
+import Task
 import Tree
 import TreeTest
 import UI
@@ -24,7 +26,7 @@ page : Shared.Model -> Request.With Params -> Page.With Model Msg
 page shared req =
     Page.element
         { init = init req.params.test
-        , update = update
+        , update = update req.params.test
         , view = view shared
         , subscriptions = subscriptions
         }
@@ -45,11 +47,18 @@ type ActiveTab
     | EditTasks
 
 
+type SaveNotificationState
+    = SaveIdle
+    | SaveSucceeded
+    | SaveFailed
+
+
 type alias LoadedModel =
     { study : TreeTest.Study
     , count : Int
     , activeTab : ActiveTab
     , showingTaskTree : Int
+    , saveNotificationState : SaveNotificationState
     }
 
 
@@ -77,13 +86,15 @@ type Msg
     | ShowTaskTree Int
     | GotStudy (Result Http.Error TreeTest.Study)
     | Save
+    | FinishedSave (Result Http.Error ())
+    | SaveGoIdle
 
 
-update : Msg -> Model -> ( Model, Cmd Msg )
-update msg model =
+update : String -> Msg -> Model -> ( Model, Cmd Msg )
+update studyID msg model =
     case ( msg, model ) of
         ( GotStudy (Ok study), _ ) ->
-            ( Loaded <| LoadedModel study 0 EditTree -1, Cmd.none )
+            ( Loaded <| LoadedModel study 0 EditTree -1 SaveIdle, Cmd.none )
 
         ( GotStudy (Err error), _ ) ->
             ( Failed error, Cmd.none )
@@ -91,7 +102,7 @@ update msg model =
         ( _, Loaded m ) ->
             let
                 ( new, cmd ) =
-                    updateLoaded msg m
+                    updateLoaded studyID msg m
             in
             ( Loaded new, cmd )
 
@@ -126,8 +137,20 @@ updateIndex f index list =
         list
 
 
-updateLoaded : Msg -> LoadedModel -> ( LoadedModel, Cmd Msg )
-updateLoaded msg model =
+delay : Float -> msg -> Cmd msg
+delay time msg =
+    Process.sleep time
+        |> Task.andThen (always <| Task.succeed msg)
+        |> Task.perform identity
+
+
+goIdleMsg : Cmd Msg
+goIdleMsg =
+    delay 5000 SaveGoIdle
+
+
+updateLoaded : String -> Msg -> LoadedModel -> ( LoadedModel, Cmd Msg )
+updateLoaded studyID msg model =
     let
         study =
             model.study
@@ -197,7 +220,16 @@ updateLoaded msg model =
             ( { model | showingTaskTree = idx }, Cmd.none )
 
         Save ->
-            Debug.todo "save"
+            ( model, TreeTest.setStudy studyID model.study FinishedSave )
+
+        FinishedSave (Ok _) ->
+            ( { model | saveNotificationState = SaveSucceeded }, goIdleMsg )
+
+        FinishedSave (Err _) ->
+            ( { model | saveNotificationState = SaveFailed }, goIdleMsg )
+
+        SaveGoIdle ->
+            ( { model | saveNotificationState = SaveIdle }, goIdleMsg )
 
         _ ->
             ( model, Cmd.none )
@@ -300,9 +332,9 @@ viewTask model idx task =
                         cont.text
 
                     label =
-                        (Tree.nodeByIDWithParents task.correctAnswer model.study.tree)
+                        Tree.nodeByIDWithParents task.correctAnswer model.study.tree
                             |> Debug.log "hm"
-                            |> Maybe.map (\(node, parents) -> (parents ++ [node]) |> List.map gText |> String.join " / ")
+                            |> Maybe.map (\( node, parents ) -> (parents ++ [ node ]) |> List.map gText |> String.join " / ")
                             |> Maybe.withDefault "Failed to find node"
                   in
                   el [ width fill ] (text label)
@@ -399,7 +431,17 @@ viewHeader model =
         , width fill
         ]
         [ text <| "Editing " ++ model.study.name
-        , el [ alignRight ] (UI.button True "Save" Save)
+        , el [ alignRight ]
+            (case model.saveNotificationState of
+                SaveFailed ->
+                    UI.destructiveButton True "Save failed!" Save
+
+                SaveIdle ->
+                    UI.button True "Save" Save
+
+                SaveSucceeded ->
+                    UI.button True "Saved!" Save
+            )
         ]
 
 

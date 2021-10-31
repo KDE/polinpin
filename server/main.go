@@ -86,6 +86,15 @@ func main() {
 		}
 		return c.JSON(v)
 	})
+	app.Post("/editor/tree-test/:id", func(c *fiber.Ctx) error {
+		var t Study
+		err := c.BodyParser(&t)
+		if err != nil {
+			return err
+		}
+		data[c.Params("id")] = t
+		return nil
+	})
 
 	app.Listen(":25727")
 }
