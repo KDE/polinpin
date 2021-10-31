@@ -29,16 +29,19 @@ view shared =
         ]
         [ el
             [ alignLeft ]
-            (text "polinpin")
+            (viewLink "polinpin" Route.Home_)
         , row
             [ alignRight, spacing 20 ]
-            [ viewLink "home" Route.Home_
-            , viewLink "tree test" (Route.TreeTest__Test_ { test = "demo" })
-            , case shared.storage.user of
-                Just _ ->
-                    none
+            ([ viewLink "home" Route.Home_
+             ]
+                ++ (case shared.storage.user of
+                        Just _ ->
+                            [ viewLink "my tree tests" Route.My__TreeTests
+                            ]
 
-                Nothing ->
-                    viewLink "login" (Route.Login)
-            ]
+                        Nothing ->
+                            [ viewLink "login" Route.Login
+                            ]
+                   )
+            )
         ]

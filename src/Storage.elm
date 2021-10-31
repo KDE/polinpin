@@ -6,9 +6,11 @@ import Json.Encode as E
 
 port save : E.Value -> Cmd msg
 
+
 saveStorage : Storage -> Cmd msg
 saveStorage storage =
     save (encoder storage)
+
 
 type alias Storage =
     { user : Maybe User

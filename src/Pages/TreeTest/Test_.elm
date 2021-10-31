@@ -6,6 +6,7 @@ import Element.Border as Border
 import Element.Events exposing (..)
 import Element.Font as Font
 import Gen.Params.TreeTest.Test_ exposing (Params)
+import HTTPExt
 import Http
 import Json.Decode as D
 import Json.Encode as E
@@ -20,7 +21,6 @@ import TreeTest
 import UI
 import Url exposing (Protocol(..))
 import View exposing (View)
-import HTTPExt
 
 
 page : Shared.Model -> Request.With Params -> Page.With Model Msg
@@ -392,6 +392,7 @@ view shared model =
             , element =
                 UI.with shared
                     [ paragraph [ padding 24 ] [ text "Loading TreeTest..." ] ]
+            , over = Nothing
             }
 
         LoadingFailed err ->
@@ -399,6 +400,7 @@ view shared model =
             , element =
                 UI.with shared
                     [ textColumn [ padding 24 ] [ par "Oh no, loading failed!", par <| HTTPExt.errorToString err ] ]
+            , over = Nothing
             }
 
         Loaded it ->
@@ -420,6 +422,7 @@ viewLoaded shared model =
                 TraversalList.BeforeList ->
                     preTask model
             ]
+    , over = Nothing
     }
 
 
@@ -489,10 +492,12 @@ viewNode model isRoot ((Tree.Node id _ children) as node) =
         , column []
             (if model.selectedNode == id then
                 List.map (viewNode model False) children
-            else
+
+             else
                 children
-                |> List.filter (Tree.containsID model.selectedNode)
-                |> List.map (viewNode model False))
+                    |> List.filter (Tree.containsID model.selectedNode)
+                    |> List.map (viewNode model False)
+            )
         ]
 
 

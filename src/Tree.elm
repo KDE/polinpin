@@ -1,4 +1,4 @@
-module Tree exposing (ID(..), Node(..), appendID, delete, encodeNode, makeLeaf, map, mapID, nodeDecoder, any, containsID, nodeByID, nodeByIDWithParents)
+module Tree exposing (ID(..), Node(..), any, appendID, containsID, delete, encodeNode, makeLeaf, map, mapID, nodeByID, nodeByIDWithParents, nodeDecoder)
 
 import Json.Decode as D
 import Json.Encode as E
@@ -11,38 +11,45 @@ type ID
 type Node a
     = Node ID a (List (Node a))
 
+
 any : (a -> Bool) -> Node a -> Bool
 any f (Node _ content children) =
-    (f content) || (List.any (any f) children)
+    f content || List.any (any f) children
 
-nodeByIDWithParents : ID -> Node a -> Maybe ((Node a, List (Node a)))
+
+nodeByIDWithParents : ID -> Node a -> Maybe ( Node a, List (Node a) )
 nodeByIDWithParents targetID ((Node id _ children) as node) =
     let
-        stepper : List (Node a) -> Node a -> Maybe ((Node a, List (Node a))) -> Maybe ((Node a, List (Node a)))
+        stepper : List (Node a) -> Node a -> Maybe ( Node a, List (Node a) ) -> Maybe ( Node a, List (Node a) )
         stepper parents ((Node stepID _ stepChildren) as stepNode) stepMaybe =
             case stepMaybe of
-                Just (cNode, cParents) ->
-                    Just (cNode, cParents)
+                Just ( cNode, cParents ) ->
+                    Just ( cNode, cParents )
 
                 Nothing ->
                     if stepID == targetID then
-                        Just (stepNode, parents)
+                        Just ( stepNode, parents )
+
                     else
-                        List.foldl (stepper <| parents ++ [stepNode]) Nothing stepChildren
+                        List.foldl (stepper <| parents ++ [ stepNode ]) Nothing stepChildren
     in
     if id == targetID then
-        Just (node, [])
+        Just ( node, [] )
+
     else
-        List.foldl (stepper [node]) Nothing children
+        List.foldl (stepper [ node ]) Nothing children
+
 
 nodeByID : ID -> Node a -> Maybe (Node a)
 nodeByID targetID node =
     nodeByIDWithParents targetID node
-    |> Maybe.map (\(it, _) -> it)
+        |> Maybe.map (\( it, _ ) -> it)
+
 
 containsID : ID -> Node a -> Bool
 containsID compID (Node id _ children) =
-    (compID == id) || (List.any (containsID compID) children)
+    (compID == id) || List.any (containsID compID) children
+
 
 encodeNode : (a -> E.Value) -> Node a -> E.Value
 encodeNode f (Node (ID id) content children) =

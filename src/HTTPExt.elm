@@ -2,6 +2,7 @@ module HTTPExt exposing (..)
 
 import Http
 
+
 errorToString : Http.Error -> String
 errorToString error =
     case error of

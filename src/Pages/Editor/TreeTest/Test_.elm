@@ -25,9 +25,9 @@ import View exposing (View)
 page : Shared.Model -> Request.With Params -> Page.With Model Msg
 page shared req =
     Page.protected.element
-        (\_ ->
+        (\user ->
             { init = init req.params.test
-            , update = update req.params.test
+            , update = update user req.params.test
             , view = view shared
             , subscriptions = subscriptions
             }
@@ -92,8 +92,8 @@ type Msg
     | SaveGoIdle
 
 
-update : String -> Msg -> Model -> ( Model, Cmd Msg )
-update studyID msg model =
+update : Shared.User -> String -> Msg -> Model -> ( Model, Cmd Msg )
+update user studyID msg model =
     case ( msg, model ) of
         ( GotStudy (Ok study), _ ) ->
             ( Loaded <| LoadedModel study 0 EditTree -1 SaveIdle, Cmd.none )
@@ -104,7 +104,7 @@ update studyID msg model =
         ( _, Loaded m ) ->
             let
                 ( new, cmd ) =
-                    updateLoaded studyID msg m
+                    updateLoaded user studyID msg m
             in
             ( Loaded new, cmd )
 
@@ -151,8 +151,8 @@ goIdleMsg =
     delay 5000 SaveGoIdle
 
 
-updateLoaded : String -> Msg -> LoadedModel -> ( LoadedModel, Cmd Msg )
-updateLoaded studyID msg model =
+updateLoaded : Shared.User -> String -> Msg -> LoadedModel -> ( LoadedModel, Cmd Msg )
+updateLoaded user studyID msg model =
     let
         study =
             model.study
@@ -222,7 +222,7 @@ updateLoaded studyID msg model =
             ( { model | showingTaskTree = idx }, Cmd.none )
 
         Save ->
-            ( model, TreeTest.setStudy studyID model.study FinishedSave )
+            ( model, TreeTest.setStudy user.token studyID model.study FinishedSave )
 
         FinishedSave (Ok _) ->
             ( { model | saveNotificationState = SaveSucceeded }, goIdleMsg )
@@ -267,12 +267,14 @@ viewLoading : Shared.Model -> View Msg
 viewLoading shared =
     View "Loading..."
         (UI.with shared [])
+        Nothing
 
 
 viewError : Shared.Model -> Http.Error -> View Msg
 viewError shared error =
     View "Error!"
         (UI.with shared [ text <| HTTPExt.errorToString error ])
+        Nothing
 
 
 viewLoaded : Shared.Model -> LoadedModel -> View Msg
@@ -293,6 +295,7 @@ viewLoaded shared model =
                 ]
             ]
         )
+        Nothing
 
 
 viewTasks : LoadedModel -> Element Msg

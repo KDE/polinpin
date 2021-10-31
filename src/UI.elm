@@ -1,4 +1,4 @@
-module UI exposing (button, destructiveButton, fontScaled, label, labelScaled, scaled, scaledInt, subToolbar, viewLink, with)
+module UI exposing (button, destructiveButton, dialog, fontScaled, label, labelScaled, scaled, scaledInt, subToolbar, textField, viewLink, with, withScrim)
 
 import Element exposing (..)
 import Element.Background as Background
@@ -102,3 +102,31 @@ subToolbar =
         , Font.color <| rgb255 255 255 255
         , width fill
         ]
+
+
+withScrim : Element msg -> Element msg
+withScrim child =
+    el [ width fill, height fill, Background.color <| rgba255 0x00 0x00 0x00 0.4 ] child
+
+
+dialog : Element msg -> Element msg
+dialog child =
+    el
+        [ paddingXY 20 16
+        , Background.color <| rgb255 255 255 255
+        , Border.rounded 4
+        , centerX
+        , centerY
+        ]
+        child
+
+
+textField : String -> (String -> msg) -> String -> Element msg
+textField currentText onChange textLabel =
+    Input.username
+        []
+        { onChange = onChange
+        , text = currentText
+        , placeholder = Nothing
+        , label = Input.labelAbove [ fontScaled 1 ] (text textLabel)
+        }

@@ -41,4 +41,5 @@ view shared =
                 Nothing ->
                     notLoggedInView
             ]
+    , over = Nothing
     }
