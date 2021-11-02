@@ -30,7 +30,21 @@ func routes(_ app: Application) throws {
     }
     app.group("completed") { completed in
         completed.post("tree-test", ":id") { req -> String in
-            throw Abort(.notImplemented)
+            let observation = try req.content.decode(Observation.self)
+
+            guard let slug = req.parameters.get("id") else {
+                throw Abort(.badRequest)
+            }
+            guard let treeTest = try await StudyModel.query(on: req.db)
+                .filter(\.$slug == slug)
+                .first() else {
+                    throw Abort(.notFound)
+                }
+
+            try await ObservationModel(id: nil, belongsTo: treeTest, observation: observation)
+                .create(on: req.db)
+
+            return "ok"
         }
     }
     app.post("login") { req -> UserSession in

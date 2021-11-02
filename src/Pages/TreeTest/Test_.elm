@@ -49,7 +49,7 @@ type alias LoadedModel =
     , questions : TraversalList AnsweredTask
     , taskStarted : Bool
     , currentlyObserving : Maybe IncompleteObservation
-    , observations : List Observation
+    , observations : List ObservationPoint
     , id : String
     , sendingState : SendingState
     }
@@ -61,11 +61,11 @@ type SendingState
     | Sent
 
 
-sendResults : String -> List Observation -> Cmd Msg
+sendResults : String -> List ObservationPoint -> Cmd Msg
 sendResults id obs =
     Http.post
         { url = "http://127.0.0.1:25727/completed/tree-test/" ++ id
-        , body = Http.jsonBody (E.list serializeObservation obs)
+        , body = Http.jsonBody (serializeObservation (Observation obs))
         , expect = Http.expectWhatever ResultsSent
         }
 
@@ -82,7 +82,7 @@ type alias PastSelection =
     }
 
 
-type alias Observation =
+type alias ObservationPoint =
     { question : AnsweredTask
     , pastSelections : List PastSelection
     , startedAt : Time.Posix
@@ -126,8 +126,8 @@ serializePastSelection selection =
         ]
 
 
-serializeObservation : Observation -> E.Value
-serializeObservation observation =
+serializeObservationPoint : ObservationPoint -> E.Value
+serializeObservationPoint observation =
     E.object
         [ ( "question", serializeAnsweredTask observation.question )
         , ( "pastSelections", E.list serializePastSelection observation.pastSelections )
@@ -135,10 +135,20 @@ serializeObservation observation =
         , ( "endedAt", serializeTime observation.endedAt )
         ]
 
+type alias Observation =
+    { observations : List ObservationPoint
+    }
 
-completeObservation : IncompleteObservation -> AnsweredTask -> Time.Posix -> Observation
+serializeObservation : Observation -> E.Value
+serializeObservation observation =
+    E.object
+        [ ("observations", (E.list serializeObservationPoint observation.observations))
+        ]
+
+
+completeObservation : IncompleteObservation -> AnsweredTask -> Time.Posix -> ObservationPoint
 completeObservation incomplete newQuestion endedAt =
-    Observation
+    ObservationPoint
         newQuestion
         incomplete.pastSelections
         incomplete.startedAt
@@ -248,7 +258,7 @@ updateLoaded msg model =
                 newList =
                     TraversalList.next updatedList
 
-                mald : Time.Posix -> IncompleteObservation -> AnsweredTask -> Observation
+                mald : Time.Posix -> IncompleteObservation -> AnsweredTask -> ObservationPoint
                 mald time incomplete question =
                     completeObservation incomplete question time
 

@@ -62,11 +62,15 @@ struct TreeTestHeader: ReqEncodable {
     var id: String
 }
 
-struct Observation: ReqEncodable {
+struct ObservationPoint: ReqEncodable {
     var question: AnsweredTask
     var pastSelections: [PastSelection]
     var startedAt: Int
     var endedAt: Int
+}
+
+struct Observation: ReqEncodable {
+    var observations: [ObservationPoint]
 }
 
 struct UserSession: ReqEncodable {

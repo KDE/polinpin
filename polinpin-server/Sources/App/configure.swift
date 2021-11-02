@@ -12,6 +12,7 @@ public func configure(_ app: Application) throws {
     app.migrations.add(CreateUser())
     app.migrations.add(CreateStudy())
     app.migrations.add(CreateSession())
+    app.migrations.add(CreateObservation())
 
     // register routes
     try routes(app)
