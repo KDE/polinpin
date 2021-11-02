@@ -116,8 +116,8 @@ getStudy id f =
 
 setStudy : String -> String -> Study -> (Result Http.Error () -> msg) -> Cmd msg
 setStudy token id study f =
-    Web.post
-        { url = Web.host ++ "/editor/tree-test/" ++ id
+    Web.patch
+        { url = Web.host ++ "/my/tree-tests/" ++ id
         , body = Http.jsonBody <| encodeStudy study
         , headers = [ Http.header "Authorization" token ]
         , expect = Http.expectWhatever f

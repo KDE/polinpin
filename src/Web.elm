@@ -33,3 +33,7 @@ get params =
 delete : { url : String, body : Http.Body, headers : List Http.Header, expect : Http.Expect msg } -> Cmd msg
 delete params =
     requestWithHeaders "DELETE" params
+
+patch : { url : String, body : Http.Body, headers : List Http.Header, expect : Http.Expect msg } -> Cmd msg
+patch params =
+    requestWithHeaders "PATCH" params

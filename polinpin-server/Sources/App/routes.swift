@@ -33,30 +33,6 @@ func routes(_ app: Application) throws {
             throw Abort(.notImplemented)
         }
     }
-    app.grouped(UserAuthenticator()).group("editor") { editor in
-        editor.post("tree-test", ":id") { req -> String in
-            let user = try req.auth.require(User.self)
-            let newStudy = try req.content.decode(Study.self)
-
-            guard let slug = req.parameters.get("id") else {
-                throw Abort(.badRequest)
-            }
-            guard let treeTest = try await StudyModel.query(on: req.db)
-                .filter(\.$slug == slug)
-                .first() else {
-                    throw Abort(.notFound)
-                }
-
-            if treeTest.$user.id != user.id {
-                throw Abort(.forbidden)
-            }
-
-            treeTest.study = newStudy
-            try await treeTest.update(on: req.db)
-
-            return "ok!"
-        }
-    }
     app.post("login") { req -> UserSession in
         let request = try req.content.decode(LoginRequest.self)
 
@@ -118,6 +94,28 @@ func routes(_ app: Application) throws {
                 }
                 try await treeTest.delete(on: req.db)
                 return ""
+            }
+            treeTests.patch(":id") { req -> String in
+                let user = try req.auth.require(User.self)
+                let newStudy = try req.content.decode(Study.self)
+
+                guard let slug = req.parameters.get("id") else {
+                    throw Abort(.badRequest)
+                }
+                guard let treeTest = try await StudyModel.query(on: req.db)
+                    .filter(\.$slug == slug)
+                    .first() else {
+                        throw Abort(.notFound)
+                    }
+
+                if treeTest.$user.id != user.id {
+                    throw Abort(.forbidden)
+                }
+
+                treeTest.study = newStudy
+                try await treeTest.update(on: req.db)
+
+                return "ok!"
             }
             treeTests.post { req -> String in
                 let request = try req.content.decode(CreateTreeTestRequest.self)
