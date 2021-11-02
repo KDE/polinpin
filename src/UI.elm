@@ -1,4 +1,4 @@
-module UI exposing (button, destructiveButton, dialog, fontScaled, label, labelScaled, scaled, scaledInt, subToolbar, textField, viewLink, with, withScrim)
+module UI exposing (button, destructiveButton, dialog, fontScaled, label, labelScaled, scaled, scaledInt, subToolbar, textField, viewLink, with, withScrim, destructiveLink)
 
 import Element exposing (..)
 import Element.Background as Background
@@ -8,6 +8,7 @@ import Element.Input as Input
 import Elements.Header
 import Gen.Route as Route exposing (Route)
 import Shared
+import Element.Events exposing (..)
 
 
 scaled : Int -> Float
@@ -50,6 +51,15 @@ viewLink textLabel route =
         { url = Route.toHref route
         , label = text textLabel
         }
+
+destructiveLink : String -> msg -> Element msg
+destructiveLink txt msg =
+    el
+        [ Font.color <| rgb255 0xe9 0x3d 0x58
+        , onClick msg
+        , pointer
+        ]
+        (text txt)
 
 
 button : Bool -> String -> msg -> Element msg

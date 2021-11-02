@@ -29,3 +29,7 @@ post params =
 get : { url : String, body : Http.Body, headers : List Http.Header, expect : Http.Expect msg } -> Cmd msg
 get params =
     requestWithHeaders "GET" params
+
+delete : { url : String, body : Http.Body, headers : List Http.Header, expect : Http.Expect msg } -> Cmd msg
+delete params =
+    requestWithHeaders "DELETE" params

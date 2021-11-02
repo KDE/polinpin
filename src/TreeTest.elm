@@ -142,3 +142,12 @@ createTreeTest token name f =
         , headers = [ Http.header "Authorization" token ]
         , expect = Http.expectJson f D.string
         }
+
+deleteTreeTest : String -> String -> (Result Http.Error () -> msg) -> Cmd msg
+deleteTreeTest token id f =
+    Web.delete
+        { url = Web.host ++ "/my/tree-tests/" ++ id
+        , body = Http.emptyBody
+        , headers = [ Http.header "Authorization" token ]
+        , expect = Http.expectWhatever f
+        }

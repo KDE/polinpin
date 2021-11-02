@@ -42,11 +42,14 @@ type Model
 
 type alias LoadedModel =
     { tests : TreeTest.MyTreeTests
-    , dialogOpen : Bool
-    , currentStudyName : String
+    , dialogState : DialogState
     , creationStatus : CreationStatus
     }
 
+type DialogState
+    = Closed
+    | OpenCreate String
+    | OpenDelete String String
 
 type CreationStatus
     = CreationIdle
@@ -68,16 +71,19 @@ type Msg
     | TreeTestClicked String
     | CreateTestClicked
     | CloseDialog
-    | DoCreate
+    | DoCreate String
+    | DoDelete String
     | ChangeCurrentStudyName String
     | TestMade (Result Http.Error String)
+    | TestDeleted (Result Http.Error ())
+    | Delete String String
 
 
 update : Shared.User -> Msg -> Model -> ( Model, Cmd Msg )
 update user msg model =
     case ( msg, model ) of
         ( MyTreeTestsLoaded (Ok tests), _ ) ->
-            ( Loaded (LoadedModel tests False "" CreationIdle), Cmd.none )
+            ( Loaded (LoadedModel tests Closed CreationIdle), Cmd.none )
 
         ( MyTreeTestsLoaded (Err err), _ ) ->
             ( Failed err, Cmd.none )
@@ -100,16 +106,28 @@ updateLoaded user msg model =
             ( model, Nav.load (Gen.Route.toHref (Gen.Route.Editor__TreeTest__Test_ { test = id })) )
 
         CreateTestClicked ->
-            ( { model | dialogOpen = True }, Cmd.none )
+            ( { model | dialogState = OpenCreate "" }, Cmd.none )
 
         CloseDialog ->
-            ( { model | dialogOpen = False }, Cmd.none )
+            ( { model | dialogState = Closed }, Cmd.none )
 
         ChangeCurrentStudyName text ->
-            ( { model | currentStudyName = text }, Cmd.none )
+            ( { model | dialogState = OpenCreate text }, Cmd.none )
 
-        DoCreate ->
-            ( { model | creationStatus = CreationPending }, TreeTest.createTreeTest user.token model.currentStudyName TestMade )
+        DoCreate name ->
+            ( { model | creationStatus = CreationPending }, TreeTest.createTreeTest user.token name TestMade )
+
+        Delete name id ->
+            ( { model | dialogState = OpenDelete name id }, Cmd.none )
+
+        DoDelete id ->
+            ( model, TreeTest.deleteTreeTest user.token id TestDeleted )
+
+        TestDeleted (Ok id) ->
+            ( model, Nav.reload )
+
+        TestDeleted (Err err) ->
+            ( model, Nav.reload )
 
         TestMade (Ok id) ->
             ( model, Nav.load (Gen.Route.toHref (Gen.Route.Editor__TreeTest__Test_ { test = id })) )
@@ -180,12 +198,12 @@ viewLoaded user shared model =
             , viewTests model.tests.tests
             ]
         )
-        (if model.dialogOpen then
-            Just (viewDialog model)
-
-         else
-            Nothing
-        )
+        (case model.dialogState of
+            Closed ->
+                Nothing
+                
+            _ ->
+                Just (viewDialog model model.dialogState))
 
 
 viewTests : List TreeTest.TreeTestOverview -> Element Msg
@@ -201,20 +219,33 @@ viewTest test =
         , Border.rounded 8
         , width fill
         , padding 16
+        , spacing 16
         ]
         [ text test.name
+        , el [ alignRight ] <| UI.destructiveLink "delete test" (Delete test.name test.id)
         , el [ alignRight ] <| UI.viewLink "edit test" (Gen.Route.Editor__TreeTest__Test_ { test = test.id })
         ]
 
 
-viewDialog : LoadedModel -> Element Msg
-viewDialog model =
+viewDialog : LoadedModel -> DialogState -> Element Msg
+viewDialog model state =
     UI.dialog <|
-        column [ spacing 8 ]
-            [ row [ spacing 20, width fill ] [ UI.labelScaled 2 "Create a new tree test", el [ alignRight ] (UI.button True "Close" CloseDialog) ]
-            , UI.textField model.currentStudyName ChangeCurrentStudyName "Study Name"
-            , el [ alignRight ] (UI.button True "Create" DoCreate)
-            ]
+        column [ spacing 16 ]
+            (case state of
+                OpenCreate name ->
+                    [ row [ spacing 20, width fill ] [ UI.labelScaled 2 "Create a new tree test", el [ alignRight ] (UI.button True "Close" CloseDialog) ]
+                    , UI.textField name ChangeCurrentStudyName "Study Name"
+                    , el [ alignRight ] (UI.button True "Create" (DoCreate name))
+                    ]
+
+                OpenDelete name id ->
+                    [ row [ spacing 20, width fill ] [ UI.labelScaled 2 "Delete a tree test", el [ alignRight ] (UI.button True "Close" CloseDialog) ]
+                    , text ("Are you sure you want to delete " ++ name ++ "?")
+                    , el [ alignRight ] (UI.destructiveButton True "Delete" (DoDelete id))
+                    ]
+
+                _ ->
+                    [])
 
 
 viewLoading : Shared.Model -> View Msg
