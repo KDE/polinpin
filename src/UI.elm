@@ -59,7 +59,7 @@ button enabled textLabel msg =
             Background.color <| rgb255 0xFF 0xE2 0x47
 
           else
-            Background.color <| rgb255 100 100 100
+            Background.color <| rgb255 0xE8 0xCB 0x2D
         , Font.color <| rgb255 0 0 0
         , paddingXY 10 6
         , Border.rounded 30
@@ -68,7 +68,7 @@ button enabled textLabel msg =
         , Element.mouseDown
             [ Background.color <| rgb255 0xC4 0xAB 0x00 ]
         ]
-        { onPress = Just msg
+        { onPress = if enabled then Just msg else Nothing
         , label = el [ centerX ] (text textLabel)
         }
 

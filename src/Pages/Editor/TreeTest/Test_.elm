@@ -57,6 +57,7 @@ type SaveNotificationState
 
 type alias LoadedModel =
     { study : TreeTest.Study
+    , oldStudy : TreeTest.Study
     , count : Int
     , activeTab : ActiveTab
     , showingTaskTree : Int
@@ -96,7 +97,7 @@ update : Shared.User -> String -> Msg -> Model -> ( Model, Cmd Msg )
 update user studyID msg model =
     case ( msg, model ) of
         ( GotStudy (Ok study), _ ) ->
-            ( Loaded <| LoadedModel study 0 EditTree -1 SaveIdle, Cmd.none )
+            ( Loaded <| LoadedModel study study 0 EditTree -1 SaveIdle, Cmd.none )
 
         ( GotStudy (Err error), _ ) ->
             ( Failed error, Cmd.none )
@@ -175,7 +176,9 @@ updateLoaded user studyID msg model =
             ( (setRootNode model <|
                 Tree.appendID id
                     (Tree.makeLeaf
-                        (Tree.ID <| String.fromInt model.count)
+                        (Tree.ID <|
+                            String.fromInt (Tree.uniqueIntID (model.count + Tree.count model.study.tree) model.study.tree)
+                        )
                         (TreeTest.Item "")
                     )
                     model.study.tree
@@ -225,7 +228,7 @@ updateLoaded user studyID msg model =
             ( model, TreeTest.setStudy user.token studyID model.study FinishedSave )
 
         FinishedSave (Ok _) ->
-            ( { model | saveNotificationState = SaveSucceeded }, goIdleMsg )
+            ( { model | saveNotificationState = SaveSucceeded, oldStudy = model.study }, goIdleMsg )
 
         FinishedSave (Err _) ->
             ( { model | saveNotificationState = SaveFailed }, goIdleMsg )
@@ -437,7 +440,10 @@ viewHeader model =
                     UI.destructiveButton True "Save failed!" Save
 
                 SaveIdle ->
-                    UI.button True "Save" Save
+                    if model.study == model.oldStudy then
+                        UI.button False "Up To Date" Save
+                    else
+                        UI.button True "Save" Save
 
                 SaveSucceeded ->
                     UI.button True "Saved!" Save

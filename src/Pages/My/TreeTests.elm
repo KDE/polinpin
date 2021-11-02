@@ -112,7 +112,7 @@ updateLoaded user msg model =
             ( { model | creationStatus = CreationPending }, TreeTest.createTreeTest user.token model.currentStudyName TestMade )
 
         TestMade (Ok id) ->
-            ( model, Nav.load (Gen.Route.toHref (Gen.Route.Editor__TreeTest__Test_ { test = id })))
+            ( model, Nav.load (Gen.Route.toHref (Gen.Route.Editor__TreeTest__Test_ { test = id })) )
 
         TestMade (Err error) ->
             ( { model | creationStatus = CreationFailed error }, Cmd.none )
@@ -149,15 +149,24 @@ view user shared model =
 
 viewLoaded : Shared.User -> Shared.Model -> LoadedModel -> View Msg
 viewLoaded user shared model =
+    let
+        device =
+            classifyDevice shared.dimensions
+    in
     View
         "My Tree Tests"
         (UI.with shared
             [ UI.subToolbar
-                [ if List.length model.tests.tests > 0 then
-                    text <| "Welcome back, " ++ user.name ++ ". Here are your tree tests."
+                [ case device.class of
+                    Phone ->
+                        none
 
-                  else
-                    text <| "Welcome back, " ++ user.name ++ ". Ready to create a tree test?"
+                    _ ->
+                        if List.length model.tests.tests > 0 then
+                            text <| "Welcome back, " ++ user.name ++ ". Here are your tree tests."
+
+                        else
+                            text <| "Welcome back, " ++ user.name ++ ". Ready to create a tree test?"
                 , case model.creationStatus of
                     CreationIdle ->
                         el [ alignRight ] (UI.button True "Create Test" CreateTestClicked)

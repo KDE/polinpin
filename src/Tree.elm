@@ -1,4 +1,4 @@
-module Tree exposing (ID(..), Node(..), any, appendID, containsID, delete, encodeNode, makeLeaf, map, mapID, nodeByID, nodeByIDWithParents, nodeDecoder)
+module Tree exposing (ID(..), Node(..), any, appendID, containsID, delete, encodeNode, makeLeaf, map, mapID, nodeByID, nodeByIDWithParents, nodeDecoder, count, uniqueIntID)
 
 import Json.Decode as D
 import Json.Encode as E
@@ -50,6 +50,12 @@ containsID : ID -> Node a -> Bool
 containsID compID (Node id _ children) =
     (compID == id) || List.any (containsID compID) children
 
+uniqueIntID : Int -> Node a -> Int
+uniqueIntID akku node =
+    if containsID (ID (String.fromInt akku)) node then
+        uniqueIntID (akku+1) node
+    else
+        akku
 
 encodeNode : (a -> E.Value) -> Node a -> E.Value
 encodeNode f (Node (ID id) content children) =
@@ -87,6 +93,9 @@ delete id (Node nid ndata nchildren) =
     in
     Node nid ndata (List.map (delete id) (List.filter filter nchildren))
 
+count : Node a -> Int
+count (Node _ _ children) =
+    1 + List.length children + List.sum (List.map count children)
 
 map : (a -> b) -> Node a -> Node b
 map f (Node id data children) =
