@@ -19,6 +19,9 @@ final class StudyModel: Model {
     @Field(key: "study")
     var study: Study
 
+    @Children(for: \.$study)
+    var observations: [ObservationModel]
+
     init() { }
 
     init(id: UUID? = nil, study: Study, name: String, slug: String, belongsTo user: User) {

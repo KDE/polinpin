@@ -93,6 +93,27 @@ func routes(_ app: Application) throws {
                     TreeTestHeader(name: study.name, id: study.slug)
                 })
             }
+            treeTests.get(":id", "statistics") { req -> TreeTestStatistics in
+                let user = try req.auth.require(User.self)
+                guard let slug = req.parameters.get("id") else {
+                    throw Abort(.badRequest)
+                }
+                guard let treeTest = try await StudyModel.query(on: req.db)
+                    .filter(\.$slug == slug)
+                    .with(\.$observations)
+                    .first() else {
+                        throw Abort(.notFound)
+                    }
+                if treeTest.$user.id != user.id {
+                    throw Abort(.forbidden)
+                }
+                
+                guard let ret = TreeTestStatistics(for: treeTest.observations.map { $0.observation }, with: treeTest.study.tree) else {
+                    throw Abort(.internalServerError)
+                }
+
+                return ret
+            }
             treeTests.delete(":id") { req -> String in
                 let user = try req.auth.require(User.self)
                 guard let slug = req.parameters.get("id") else {

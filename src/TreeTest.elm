@@ -151,3 +151,29 @@ deleteTreeTest token id f =
         , headers = [ Http.header "Authorization" token ]
         , expect = Http.expectWhatever f
         }
+
+type alias TreeTestStatistics =
+    { medianTime: Float
+    , minimumTime: Float
+    , maximumTime: Float
+    , percentCorrect: Float
+    , percentDirect: Float
+    }
+
+treetestStatisticsDecoder : D.Decoder TreeTestStatistics
+treetestStatisticsDecoder =
+    D.map5 TreeTestStatistics
+        (D.field "medianTime" D.float)
+        (D.field "minimumTime" D.float)
+        (D.field "maximumTime" D.float)
+        (D.field "percentCorrect" D.float)
+        (D.field "percentDirect" D.float)
+
+treeTestStatistics : String -> String -> (Result Http.Error TreeTestStatistics -> msg) -> Cmd msg
+treeTestStatistics token id f =
+    Web.get
+        { url = Web.host ++ "/my/tree-tests/" ++ id ++ "/statistics/"
+        , body = Http.emptyBody
+        , headers = [ Http.header "Authorization" token ]
+        , expect = Http.expectJson f treetestStatisticsDecoder
+        }
