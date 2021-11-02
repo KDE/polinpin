@@ -68,7 +68,12 @@ button enabled textLabel msg =
         , Element.mouseDown
             [ Background.color <| rgb255 0xC4 0xAB 0x00 ]
         ]
-        { onPress = if enabled then Just msg else Nothing
+        { onPress =
+            if enabled then
+                Just msg
+
+            else
+                Nothing
         , label = el [ centerX ] (text textLabel)
         }
 

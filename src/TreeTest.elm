@@ -37,12 +37,13 @@ type alias TreeTestOverview =
     }
 
 
-nullableList : D.Decoder a -> (D.Decoder (List a))
+nullableList : D.Decoder a -> D.Decoder (List a)
 nullableList item =
     D.oneOf
-        [ D.nullable (D.list item) |> (D.map (Maybe.withDefault []))
+        [ D.nullable (D.list item) |> D.map (Maybe.withDefault [])
         , D.null []
         ]
+
 
 encodeStudy : Study -> E.Value
 encodeStudy study =
@@ -78,11 +79,11 @@ myTreeTestsDecoder : D.Decoder MyTreeTests
 myTreeTestsDecoder =
     D.map MyTreeTests
         (D.field "tests"
-            ((D.map2 TreeTestOverview
+            (D.map2 TreeTestOverview
                 (D.field "name" D.string)
                 (D.field "id" D.string)
+                |> nullableList
             )
-            |> nullableList)
         )
 
 

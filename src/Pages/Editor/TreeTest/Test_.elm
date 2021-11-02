@@ -442,6 +442,7 @@ viewHeader model =
                 SaveIdle ->
                     if model.study == model.oldStudy then
                         UI.button False "Up To Date" Save
+
                     else
                         UI.button True "Save" Save
 
