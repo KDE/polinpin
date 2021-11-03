@@ -129,6 +129,18 @@ cardCont title percent desc color =
         , el [ centerX ] <| UI.labelScaled -1 desc
         ]
 
+taskStatistics : TreeTest.TaskStatistics -> Element Msg
+taskStatistics stats =
+    let
+        item percent color =
+            el [ width (fillPortion (round (percent*1000))), height (px 16), Background.color color ] none
+    in
+    row [ width fill ]
+        [ item stats.percentIncorrectDirect <| rgb255 255 0 0
+        , item stats.percentIncorrectIndirect <| rgb255 255 100 100
+        , item stats.percentCorrectIndirect <| rgb255 100 255 100
+        , item stats.percentCorrectDirect <| rgb255 0 255 0
+        ]
 
 viewLoaded : Shared.Model -> LoadedModel -> View Msg
 viewLoaded shared model =
@@ -162,6 +174,10 @@ viewLoaded shared model =
                             ]
                         ]
                     )
+                , UI.card [ width fill ]
+                    (titledCard "Per-Task Statistics"
+                        [ width fill ]
+                        (model.statistics.taskStatistics |> List.map taskStatistics))
                 ]
             ]
         )

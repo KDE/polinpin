@@ -153,21 +153,38 @@ deleteTreeTest token id f =
         }
 
 type alias TreeTestStatistics =
-    { medianTime: Float
-    , minimumTime: Float
-    , maximumTime: Float
-    , percentCorrect: Float
-    , percentDirect: Float
+    { medianTime : Float
+    , minimumTime : Float
+    , maximumTime : Float
+    , percentCorrect : Float
+    , percentDirect : Float
+    , taskStatistics : List TaskStatistics
     }
+
+type alias TaskStatistics =
+    { percentCorrectDirect : Float
+    , percentCorrectIndirect : Float
+    , percentIncorrectDirect : Float
+    , percentIncorrectIndirect : Float
+    }
+
+taskStatisticsDecoder : D.Decoder TaskStatistics
+taskStatisticsDecoder =
+    D.map4 TaskStatistics
+        (D.field "percentCorrectDirect" D.float)
+        (D.field "percentCorrectIndirect" D.float)
+        (D.field "percentIncorrectDirect" D.float)
+        (D.field "percentIncorrectIndirect" D.float)
 
 treetestStatisticsDecoder : D.Decoder TreeTestStatistics
 treetestStatisticsDecoder =
-    D.map5 TreeTestStatistics
+    D.map6 TreeTestStatistics
         (D.field "medianTime" D.float)
         (D.field "minimumTime" D.float)
         (D.field "maximumTime" D.float)
         (D.field "percentCorrect" D.float)
         (D.field "percentDirect" D.float)
+        (D.field "taskStatistics" (D.list taskStatisticsDecoder))
 
 treeTestStatistics : String -> String -> (Result Http.Error TreeTestStatistics -> msg) -> Cmd msg
 treeTestStatistics token id f =
