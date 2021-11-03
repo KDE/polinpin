@@ -1,4 +1,4 @@
-module UI exposing (button, destructiveButton, dialog, fontScaled, label, labelScaled, scaled, scaledInt, subToolbar, textField, viewLink, with, withScrim, destructiveLink)
+module UI exposing (button, destructiveButton, dialog, fontScaled, label, labelScaled, scaled, scaledInt, subToolbar, textField, viewLink, with, withScrim, destructiveLink, card)
 
 import Element exposing (..)
 import Element.Background as Background
@@ -145,3 +145,7 @@ textField currentText onChange textLabel =
         , placeholder = Nothing
         , label = Input.labelAbove [ fontScaled 1 ] (text textLabel)
         }
+
+card : List (Attribute msg) -> Element msg -> Element msg
+card attrs =
+    el ([ padding 16, Border.color <| rgb255 0xee 0xee 0xee, Border.width 1, Border.rounded 3 ] ++ attrs)

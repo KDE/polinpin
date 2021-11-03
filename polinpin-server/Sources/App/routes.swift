@@ -107,7 +107,11 @@ func routes(_ app: Application) throws {
                 if treeTest.$user.id != user.id {
                     throw Abort(.forbidden)
                 }
-                
+
+                if treeTest.observations.count <= 2 {
+                    throw Abort(.imATeapot)
+                }
+
                 guard let ret = TreeTestStatistics(for: treeTest.observations.map { $0.observation }, with: treeTest.study.tree) else {
                     throw Abort(.internalServerError)
                 }
