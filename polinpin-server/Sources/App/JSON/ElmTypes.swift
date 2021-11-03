@@ -97,6 +97,10 @@ extension ObservationPoint {
 
         return lastDate.timeIntervalSince(firstDate)
     }
+    
+    var correct : Bool {
+        question.answer == question.task.correctAnswer
+    }
 
     func direct(tree: Node<Item>) -> Bool {
         var node = tree
@@ -115,6 +119,21 @@ extension ObservationPoint {
 
 struct Observation: ReqEncodable {
     var observations: [ObservationPoint]
+}
+
+extension Array where Element == ObservationPoint {
+    func percentCorrectDirect(tree: Node<Item>) -> Float {
+        self.percent { $0.correct && $0.direct(tree: tree) }
+    }
+    func percentCorrectIndirect(tree: Node<Item>) -> Float {
+        self.percent { $0.correct && !$0.direct(tree: tree) }
+    }
+    func percentIncorrectDirect(tree: Node<Item>) -> Float {
+        self.percent { !$0.correct && $0.direct(tree: tree) }
+    }
+    func percentIncorrectIndirect(tree: Node<Item>) -> Float {
+        self.percent { !$0.correct && !$0.direct(tree: tree) }
+    }
 }
 
 extension Observation {
@@ -140,6 +159,21 @@ extension Array {
         return result
     }
 }
+
+extension Array where Element: RandomAccessCollection, Element.Index == Int {
+    func zipArray() -> [[Element.Element]] {
+        guard let minCount = (self.map { $0.count }).min() else {
+            return []
+        }
+        var retArray = Array<Array<Element.Element>>()
+        retArray.reserveCapacity(minCount)
+        for idx in 0...(minCount-1) {
+            retArray.append(self.map { $0[idx] })
+        }
+        return retArray
+    }
+}
+
 
 extension Array where Element == Double {
     var median: Double {
@@ -192,6 +226,13 @@ struct MyTreeTestsResponse: ReqEncodable {
     var tests: [TreeTestHeader]
 }
 
+struct TaskStatistics: ReqEncodable {
+    var percentCorrectDirect: Float
+    var percentCorrectIndirect: Float
+    var percentIncorrectDirect: Float
+    var percentIncorrectIndirect: Float
+}
+
 struct TreeTestStatistics: ReqEncodable {
     var medianTime: Double
     var minimumTime: Double
@@ -203,10 +244,21 @@ struct TreeTestStatistics: ReqEncodable {
     // amount of answers chosen without backtracking
     var percentDirect: Float
 
+    var taskStatistics: [TaskStatistics]
+
     init?(for observations: [Observation], with tree: Node<Item>) {
         percentCorrect = observations.flatMap { $0.observations }.percent { $0.question.answer == $0.question.task.correctAnswer }
         guard let times = observations.map({ $0.timeTaken }).mapOptional() else {
             return nil
+        }
+
+        taskStatistics = observations.map { $0.observations }.zipArray().map { obs in 
+            TaskStatistics(
+                percentCorrectDirect: obs.percentCorrectDirect(tree: tree),
+                percentCorrectIndirect: obs.percentCorrectIndirect(tree: tree),
+                percentIncorrectDirect: obs.percentIncorrectDirect(tree: tree),
+                percentIncorrectIndirect: obs.percentIncorrectIndirect(tree: tree)
+            )
         }
 
         medianTime = times.median
