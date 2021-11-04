@@ -129,18 +129,53 @@ cardCont title percent desc color =
         , el [ centerX ] <| UI.labelScaled -1 desc
         ]
 
-taskStatistics : TreeTest.TaskStatistics -> Element Msg
-taskStatistics stats =
+
+taskStatistics : Int -> TreeTest.TaskStatistics -> Element Msg
+taskStatistics num stats =
     let
         item percent color =
-            el [ width (fillPortion (round (percent*1000))), height (px 16), Background.color color ] none
+            el [ width (fillPortion (round (percent * 1000))), height (px 16), Background.color color ] none
     in
-    row [ width fill ]
-        [ item stats.percentIncorrectDirect <| rgb255 255 0 0
-        , item stats.percentIncorrectIndirect <| rgb255 255 100 100
-        , item stats.percentCorrectIndirect <| rgb255 100 255 100
-        , item stats.percentCorrectDirect <| rgb255 0 255 0
+    column [ width fill, spacing 8 ]
+        [ UI.labelScaled -1 ("Task " ++ String.fromInt num)
+        , row [ width fill ]
+            [ item stats.percentIncorrectDirect colorIncorrectDirect
+            , item stats.percentIncorrectIndirect colorIncorrectIndirect
+            , item stats.percentCorrectIndirect colorCorrectIndirect
+            , item stats.percentCorrectDirect colorCorrectDirect
+            ]
         ]
+
+
+colorIncorrectDirect : Color
+colorIncorrectDirect =
+    rgb255 255 0 0
+
+
+colorIncorrectIndirect : Color
+colorIncorrectIndirect =
+    rgb255 0xFF 0xA5 0x00
+
+
+colorCorrectIndirect : Color
+colorCorrectIndirect =
+    rgb255 0x99 0x32 0xCC
+
+
+colorCorrectDirect : Color
+colorCorrectDirect =
+    rgb255 0 255 0
+
+
+legend : Color -> String -> Element msg
+legend color key =
+    let
+        square =
+            el [ Background.color color, width (px 16), height (px 16), Border.rounded 4 ] none
+    in
+    row [ spacing 4 ]
+        [ square, UI.labelScaled -1 key ]
+
 
 viewLoaded : Shared.Model -> LoadedModel -> View Msg
 viewLoaded shared model =
@@ -149,7 +184,7 @@ viewLoaded shared model =
         (UI.with shared
             [ UI.subToolbar [ text "Statistics" ]
             , column [ centerX, padding 16, width (fill |> maximum 800), spacing 16 ]
-                [ row [ width fill, spacing 32 ]
+                [ wrappedRow [ width fill, spacing 32 ]
                     [ UI.card [ width fill ]
                         (cardCont "Success" model.statistics.percentCorrect "Average sucecss rate across all tasks." (rgb255 0x00 0x93 0x56))
                     , UI.card [ width fill ]
@@ -161,14 +196,14 @@ viewLoaded shared model =
                         [ paragraph []
                             [ UI.labelScaled 1
                                 ("The median time for completion was "
-                                    ++ String.fromInt ( round (model.statistics.medianTime / 1000) )
+                                    ++ String.fromInt (round (model.statistics.medianTime / 1000))
                                     ++ " seconds."
                                 )
                             , UI.labelScaled 1
                                 (" The minimum time was "
-                                    ++ String.fromInt ( round (model.statistics.minimumTime / 1000) )
+                                    ++ String.fromInt (round (model.statistics.minimumTime / 1000))
                                     ++ " seconds and the maximum time was "
-                                    ++ String.fromInt ( round (model.statistics.maximumTime / 1000) )
+                                    ++ String.fromInt (round (model.statistics.maximumTime / 1000))
                                     ++ " seconds."
                                 )
                             ]
@@ -177,7 +212,16 @@ viewLoaded shared model =
                 , UI.card [ width fill ]
                     (titledCard "Per-Task Statistics"
                         [ width fill ]
-                        (model.statistics.taskStatistics |> List.map taskStatistics))
+                        (wrappedRow
+                            [ centerX, spacing 16 ]
+                            [ legend colorIncorrectDirect "Direct Failure"
+                            , legend colorIncorrectIndirect "Indirect Failure"
+                            , legend colorCorrectIndirect "Indirect Success"
+                            , legend colorCorrectDirect "Direct Success"
+                            ]
+                            :: (model.statistics.taskStatistics |> List.indexedMap taskStatistics)
+                        )
+                    )
                 ]
             ]
         )
