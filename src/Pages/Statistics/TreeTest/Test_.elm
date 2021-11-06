@@ -259,7 +259,6 @@ viewTaskStats tree idx (task, stats) =
 
         label =
             Tree.nodeByIDWithParents task.correctAnswer tree
-                |> Debug.log "hm"
                 |> Maybe.map (\( node, parents ) -> (parents ++ [ node ]) |> List.map gText |> String.join " / ")
                 |> Maybe.withDefault "Failed to find node"
     in
