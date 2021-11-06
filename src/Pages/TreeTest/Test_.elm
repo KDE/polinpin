@@ -19,6 +19,7 @@ import TraversalList exposing (TraversalList)
 import Tree
 import TreeTest
 import UI
+import Web
 import Url exposing (Protocol(..))
 import View exposing (View)
 
@@ -64,7 +65,7 @@ type SendingState
 sendResults : String -> List ObservationPoint -> Cmd Msg
 sendResults id obs =
     Http.post
-        { url = "http://127.0.0.1:25727/completed/tree-test/" ++ id
+        { url = Web.host ++ "/completed/tree-test/" ++ id
         , body = Http.jsonBody (serializeObservation (Observation obs))
         , expect = Http.expectWhatever ResultsSent
         }
