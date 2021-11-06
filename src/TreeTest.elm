@@ -159,32 +159,36 @@ type alias TreeTestStatistics =
     , percentCorrect : Float
     , percentDirect : Float
     , taskStatistics : List TaskStatistics
+    , study : Study
+    , userCount : Int
     }
 
 type alias TaskStatistics =
-    { percentCorrectDirect : Float
-    , percentCorrectIndirect : Float
-    , percentIncorrectDirect : Float
-    , percentIncorrectIndirect : Float
+    { correctDirect : Int
+    , correctIndirect : Int
+    , incorrectDirect : Int
+    , incorrectIndirect : Int
     }
 
 taskStatisticsDecoder : D.Decoder TaskStatistics
 taskStatisticsDecoder =
     D.map4 TaskStatistics
-        (D.field "percentCorrectDirect" D.float)
-        (D.field "percentCorrectIndirect" D.float)
-        (D.field "percentIncorrectDirect" D.float)
-        (D.field "percentIncorrectIndirect" D.float)
+        (D.field "correctDirect" D.int)
+        (D.field "correctIndirect" D.int)
+        (D.field "incorrectDirect" D.int)
+        (D.field "incorrectIndirect" D.int)
 
 treetestStatisticsDecoder : D.Decoder TreeTestStatistics
 treetestStatisticsDecoder =
-    D.map6 TreeTestStatistics
+    D.map8 TreeTestStatistics
         (D.field "medianTime" D.float)
         (D.field "minimumTime" D.float)
         (D.field "maximumTime" D.float)
         (D.field "percentCorrect" D.float)
         (D.field "percentDirect" D.float)
         (D.field "taskStatistics" (D.list taskStatisticsDecoder))
+        (D.field "study" studyDecoder)
+        (D.field "userCount" D.int)
 
 treeTestStatistics : String -> String -> (Result Http.Error TreeTestStatistics -> msg) -> Cmd msg
 treeTestStatistics token id f =

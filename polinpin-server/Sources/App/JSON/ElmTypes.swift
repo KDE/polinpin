@@ -122,17 +122,17 @@ struct Observation: ReqEncodable {
 }
 
 extension Array where Element == ObservationPoint {
-    func percentCorrectDirect(tree: Node<Item>) -> Float {
-        self.percent { $0.correct && $0.direct(tree: tree) }
+    func countCorrectDirect(tree: Node<Item>) -> Int {
+        self.filterCount { $0.correct && $0.direct(tree: tree) }
     }
-    func percentCorrectIndirect(tree: Node<Item>) -> Float {
-        self.percent { $0.correct && !$0.direct(tree: tree) }
+    func countCorrectIndirect(tree: Node<Item>) -> Int {
+        self.filterCount { $0.correct && !$0.direct(tree: tree) }
     }
-    func percentIncorrectDirect(tree: Node<Item>) -> Float {
-        self.percent { !$0.correct && $0.direct(tree: tree) }
+    func countIncorrectDirect(tree: Node<Item>) -> Int {
+        self.filterCount { !$0.correct && $0.direct(tree: tree) }
     }
-    func percentIncorrectIndirect(tree: Node<Item>) -> Float {
-        self.percent { !$0.correct && !$0.direct(tree: tree) }
+    func countIncorrectIndirect(tree: Node<Item>) -> Int {
+        self.filterCount { !$0.correct && !$0.direct(tree: tree) }
     }
 }
 
@@ -157,6 +157,9 @@ extension Array {
             result = transform(result, item)
         }
         return result
+    }
+    @inlinable func filterCount(_ predicate: (Element) throws -> Bool) rethrows -> Int {
+        return try filter(predicate).count
     }
 }
 
@@ -227,10 +230,10 @@ struct MyTreeTestsResponse: ReqEncodable {
 }
 
 struct TaskStatistics: ReqEncodable {
-    var percentCorrectDirect: Float
-    var percentCorrectIndirect: Float
-    var percentIncorrectDirect: Float
-    var percentIncorrectIndirect: Float
+    var correctDirect: Int
+    var correctIndirect: Int
+    var incorrectDirect: Int
+    var incorrectIndirect: Int
 }
 
 struct TreeTestStatistics: ReqEncodable {
@@ -246,7 +249,11 @@ struct TreeTestStatistics: ReqEncodable {
 
     var taskStatistics: [TaskStatistics]
 
-    init?(for observations: [Observation], with tree: Node<Item>) {
+    var study: Study
+    var userCount: Int
+
+    init?(for observations: [Observation], for study: Study) {
+        userCount = observations.count
         percentCorrect = observations.flatMap { $0.observations }.percent { $0.question.answer == $0.question.task.correctAnswer }
         guard let times = observations.map({ $0.timeTaken }).mapOptional() else {
             return nil
@@ -254,19 +261,21 @@ struct TreeTestStatistics: ReqEncodable {
 
         taskStatistics = observations.map { $0.observations }.zipArray().map { obs in 
             TaskStatistics(
-                percentCorrectDirect: obs.percentCorrectDirect(tree: tree),
-                percentCorrectIndirect: obs.percentCorrectIndirect(tree: tree),
-                percentIncorrectDirect: obs.percentIncorrectDirect(tree: tree),
-                percentIncorrectIndirect: obs.percentIncorrectIndirect(tree: tree)
+                correctDirect: obs.countCorrectDirect(tree: study.tree),
+                correctIndirect: obs.countCorrectIndirect(tree: study.tree),
+                incorrectDirect: obs.countIncorrectDirect(tree: study.tree),
+                incorrectIndirect: obs.countIncorrectIndirect(tree: study.tree)
             )
         }
 
+        self.study = study
+
         medianTime = times.median
         guard let min = times.min() else { return nil }
-        minimumTime = min 
+        minimumTime = min
         guard let max = times.max() else { return nil }
         maximumTime = max
 
-        percentDirect = observations.flatMap { $0.observations }.percent { $0.direct(tree: tree) }
+        percentDirect = observations.flatMap { $0.observations }.percent { $0.direct(tree: study.tree) }
     }
 }

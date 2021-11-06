@@ -112,7 +112,7 @@ func routes(_ app: Application) throws {
                     throw Abort(.imATeapot)
                 }
 
-                guard let ret = TreeTestStatistics(for: treeTest.observations.map { $0.observation }, with: treeTest.study.tree) else {
+                guard let ret = TreeTestStatistics(for: treeTest.observations.map { $0.observation }, for: treeTest.study) else {
                     throw Abort(.internalServerError)
                 }
 

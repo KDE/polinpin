@@ -1,4 +1,4 @@
-module UI exposing (button, destructiveButton, dialog, fontScaled, label, labelScaled, scaled, scaledInt, subToolbar, textField, viewLink, with, withScrim, destructiveLink, card)
+module UI exposing (button, destructiveButton, dialog, fontScaled, label, labelScaled, scaled, scaledInt, subToolbar, textField, viewLink, with, withScrim, destructiveLink, card, tab, edges, separator)
 
 import Element exposing (..)
 import Element.Background as Background
@@ -28,7 +28,7 @@ fontScaled at =
 
 label : List (Attribute msg) -> String -> Element msg
 label attrs str =
-    el attrs (text str)
+    el ((Font.size (scaled 0 |> round)) :: attrs) (text str)
 
 
 labelScaled : Int -> String -> Element msg
@@ -149,3 +149,38 @@ textField currentText onChange textLabel =
 card : List (Attribute msg) -> Element msg -> Element msg
 card attrs =
     el ([ padding 16, Border.color <| rgb255 0xee 0xee 0xee, Border.width 1, Border.rounded 3 ] ++ attrs)
+
+separator : List (Attribute msg) -> Element msg
+separator attrs =
+    el ([Background.color <| rgb255 0xee 0xf1 0xf5, width (px 1), height (px 1)] ++ attrs) none
+
+tab : String -> Bool -> msg -> Element msg
+tab txt active onClicked =
+    el
+        [ paddingXY 10 8
+        , Border.roundEach { bottomLeft = 4, bottomRight = 4, topLeft = 0, topRight = 0 }
+        , Background.color <|
+            if active then
+                rgb255 0x03 0x66 0x88
+
+            else
+                rgb255 0xD1 0xD5 0xD9
+        , Font.color <|
+            if active then
+                rgb255 0xFF 0xFF 0xFF
+
+            else
+                rgb255 0x00 0x00 0x00
+        , onClick onClicked
+        , pointer
+        ]
+        (text txt)
+
+
+edges : { left : number, right : number, bottom : number, top : number }
+edges =
+    { left = 0
+    , right = 0
+    , bottom = 0
+    , top = 0
+    }

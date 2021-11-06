@@ -392,34 +392,11 @@ viewTaskNode idx task (Tree.Node nID nData nChildren) =
         )
 
 
-tab : String -> Bool -> Msg -> Element Msg
-tab label active onClicked =
-    el
-        [ paddingXY 10 8
-        , Border.roundEach { bottomLeft = 4, bottomRight = 4, topLeft = 0, topRight = 0 }
-        , Background.color <|
-            if active then
-                rgb255 0x03 0x66 0x88
-
-            else
-                rgb255 0xD1 0xD5 0xD9
-        , Font.color <|
-            if active then
-                rgb255 0xFF 0xFF 0xFF
-
-            else
-                rgb255 0x00 0x00 0x00
-        , onClick onClicked
-        , pointer
-        ]
-        (text label)
-
-
 viewTabs : LoadedModel -> Element Msg
 viewTabs model =
     let
         make label role =
-            tab label (model.activeTab == role) (TabClicked role)
+            UI.tab label (model.activeTab == role) (TabClicked role)
 
         roles =
             [ make "Tree" EditTree

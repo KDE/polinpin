@@ -16,6 +16,8 @@ import Shared
 import TreeTest
 import UI
 import View exposing (View)
+import UI exposing (edges)
+import Tree
 
 
 page : Shared.Model -> Request.With Params -> Page.With Model Msg
@@ -42,8 +44,12 @@ type Model
 
 type alias LoadedModel =
     { statistics : TreeTest.TreeTestStatistics
+    , activeTab : Tab
     }
 
+type Tab
+    = Overview
+    | PerTaskStats
 
 init : Shared.User -> String -> ( Model, Cmd Msg )
 init user test =
@@ -56,16 +62,20 @@ init user test =
 
 type Msg
     = FinishedLoading (Result Http.Error TreeTest.TreeTestStatistics)
+    | TabClicked Tab
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case ( msg, model ) of
         ( FinishedLoading (Ok stats), Loading ) ->
-            ( Loaded (LoadedModel stats), Cmd.none )
+            ( Loaded (LoadedModel stats Overview), Cmd.none )
 
         ( FinishedLoading (Err error), Loading ) ->
             ( LoadFailed error, Cmd.none )
+
+        ( TabClicked _, Loading ) ->
+            ( model, Cmd.none )
 
         ( _, Loaded loadedModel ) ->
             let
@@ -83,6 +93,9 @@ updateLoaded msg model =
     case msg of
         FinishedLoading _ ->
             ( model, Cmd.none )
+
+        TabClicked tab ->
+            ( { model | activeTab = tab }, Cmd.none )
 
 
 
@@ -130,8 +143,8 @@ cardCont title percent desc color =
         ]
 
 
-taskStatistics : Int -> TreeTest.TaskStatistics -> Element Msg
-taskStatistics num stats =
+taskStatistics : Int -> Int -> TreeTest.TaskStatistics -> Element Msg
+taskStatistics userCount num stats =
     let
         item percent color =
             el [ width (fillPortion (round (percent * 1000))), height (px 16), Background.color color ] none
@@ -139,10 +152,10 @@ taskStatistics num stats =
     column [ width fill, spacing 8 ]
         [ UI.labelScaled -1 ("Task " ++ String.fromInt num)
         , row [ width fill ]
-            [ item stats.percentIncorrectDirect colorIncorrectDirect
-            , item stats.percentIncorrectIndirect colorIncorrectIndirect
-            , item stats.percentCorrectIndirect colorCorrectIndirect
-            , item stats.percentCorrectDirect colorCorrectDirect
+            [ item ((toFloat stats.incorrectDirect) / (toFloat userCount)) colorIncorrectDirect
+            , item ((toFloat stats.incorrectIndirect) / (toFloat userCount)) colorIncorrectIndirect
+            , item ((toFloat stats.correctIndirect) / (toFloat userCount)) colorCorrectIndirect
+            , item ((toFloat stats.correctDirect) / (toFloat userCount)) colorCorrectDirect
             ]
         ]
 
@@ -176,6 +189,106 @@ legend color key =
     row [ spacing 4 ]
         [ square, UI.labelScaled -1 key ]
 
+viewTabs : LoadedModel -> Element Msg
+viewTabs model =
+    let
+        make label role =
+            UI.tab label (model.activeTab == role) (TabClicked role)
+
+        roles =
+            [ make "Overview" Overview
+            , make "Per-Task Statistics" PerTaskStats
+            ]
+    in
+    row [ paddingEach { edges | left = 8 }, spacing 6 ]
+        roles
+
+
+viewStatistics : Shared.Model -> LoadedModel -> Element Msg
+viewStatistics shared model =
+    column [ centerX, padding 16, width (fill |> maximum 800), spacing 16 ]
+        [ wrappedRow [ width fill, spacing 32 ]
+            [ UI.card [ width fill ]
+                (cardCont "Success" model.statistics.percentCorrect "Average sucecss rate across all tasks." (rgb255 0x00 0x93 0x56))
+            , UI.card [ width fill ]
+                (cardCont "Directness" model.statistics.percentDirect "Percentage of tasks completed without backtracking." (rgb255 0x00 0x92 0x7E))
+            ]
+        , UI.card [ width fill ]
+            (titledCard "Completion Time"
+                [ width fill ]
+                [ paragraph []
+                    [ UI.labelScaled 1
+                        ("The median time for completion was "
+                            ++ String.fromInt (round (model.statistics.medianTime / 1000))
+                            ++ " seconds."
+                        )
+                    , UI.labelScaled 1
+                        (" The minimum time was "
+                            ++ String.fromInt (round (model.statistics.minimumTime / 1000))
+                            ++ " seconds and the maximum time was "
+                            ++ String.fromInt (round (model.statistics.maximumTime / 1000))
+                            ++ " seconds."
+                        )
+                    ]
+                ]
+            )
+        , UI.card [ width fill ]
+            (titledCard "Per-Task Statistics"
+                [ width fill ]
+                (wrappedRow
+                    [ centerX, spacing 16 ]
+                    [ legend colorIncorrectDirect "Direct Failure"
+                    , legend colorIncorrectIndirect "Indirect Failure"
+                    , legend colorCorrectIndirect "Indirect Success"
+                    , legend colorCorrectDirect "Direct Success"
+                    ]
+                    :: (model.statistics.taskStatistics |> List.indexedMap (taskStatistics model.statistics.userCount))
+                )
+            )
+        ]
+
+zip : List a -> List b -> List (a, b)
+zip =
+    List.map2 Tuple.pair
+
+viewTaskStats : Tree.Node TreeTest.Item -> Int -> (TreeTest.Task, TreeTest.TaskStatistics) -> Element Msg
+viewTaskStats tree idx (task, stats) =
+    let
+        gText (Tree.Node _ cont _) =
+            cont.text
+
+        label =
+            Tree.nodeByIDWithParents task.correctAnswer tree
+                |> Debug.log "hm"
+                |> Maybe.map (\( node, parents ) -> (parents ++ [ node ]) |> List.map gText |> String.join " / ")
+                |> Maybe.withDefault "Failed to find node"
+    in
+    UI.card [ width fill ]
+        ( column [ spacing 16, width fill ]
+            [ UI.labelScaled -2 ("Task " ++ (String.fromInt (idx + 1)))
+            , UI.label [] task.text
+            , (UI.labelScaled -1 label)
+            , UI.separator [ width fill ]
+            , UI.label [] "Correct"
+            , column [ paddingEach { edges | left = 8 }, spacing 10 ]
+                [ UI.label [] ("Direct " ++ (String.fromInt stats.correctDirect))
+                , UI.label [] ("Indirect " ++ (String.fromInt stats.correctIndirect))
+                ]
+            , UI.label [] "Incorrect"
+            , column [ paddingEach { edges | left = 8 }, spacing 10 ]
+                [ UI.label [] ("Direct " ++ (String.fromInt stats.incorrectDirect))
+                , UI.label [] ("Indirect " ++ (String.fromInt stats.incorrectIndirect))
+                ]
+            ]
+        )
+
+viewPerTaskStats : Shared.Model -> LoadedModel -> Element Msg
+viewPerTaskStats shared model =
+    column [ centerX, padding 16, width (fill |> maximum 800), spacing 16 ]
+        (
+            (zip model.statistics.study.tasks model.statistics.taskStatistics)
+            |> List.indexedMap (viewTaskStats model.statistics.study.tree)
+        )
 
 viewLoaded : Shared.Model -> LoadedModel -> View Msg
 viewLoaded shared model =
@@ -183,46 +296,13 @@ viewLoaded shared model =
         "Statistics"
         (UI.with shared
             [ UI.subToolbar [ text "Statistics" ]
-            , column [ centerX, padding 16, width (fill |> maximum 800), spacing 16 ]
-                [ wrappedRow [ width fill, spacing 32 ]
-                    [ UI.card [ width fill ]
-                        (cardCont "Success" model.statistics.percentCorrect "Average sucecss rate across all tasks." (rgb255 0x00 0x93 0x56))
-                    , UI.card [ width fill ]
-                        (cardCont "Directness" model.statistics.percentDirect "Percentage of tasks completed without backtracking." (rgb255 0x00 0x92 0x7E))
-                    ]
-                , UI.card [ width fill ]
-                    (titledCard "Completion Time"
-                        [ width fill ]
-                        [ paragraph []
-                            [ UI.labelScaled 1
-                                ("The median time for completion was "
-                                    ++ String.fromInt (round (model.statistics.medianTime / 1000))
-                                    ++ " seconds."
-                                )
-                            , UI.labelScaled 1
-                                (" The minimum time was "
-                                    ++ String.fromInt (round (model.statistics.minimumTime / 1000))
-                                    ++ " seconds and the maximum time was "
-                                    ++ String.fromInt (round (model.statistics.maximumTime / 1000))
-                                    ++ " seconds."
-                                )
-                            ]
-                        ]
-                    )
-                , UI.card [ width fill ]
-                    (titledCard "Per-Task Statistics"
-                        [ width fill ]
-                        (wrappedRow
-                            [ centerX, spacing 16 ]
-                            [ legend colorIncorrectDirect "Direct Failure"
-                            , legend colorIncorrectIndirect "Indirect Failure"
-                            , legend colorCorrectIndirect "Indirect Success"
-                            , legend colorCorrectDirect "Direct Success"
-                            ]
-                            :: (model.statistics.taskStatistics |> List.indexedMap taskStatistics)
-                        )
-                    )
-                ]
+            , viewTabs model
+            , case model.activeTab of
+                Overview ->
+                    viewStatistics shared model
+
+                PerTaskStats ->
+                    viewPerTaskStats shared model
             ]
         )
         Nothing
