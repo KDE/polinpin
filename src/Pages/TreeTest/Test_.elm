@@ -169,6 +169,7 @@ type Msg
     = NodeClicked Tree.ID
     | NextQuestion
     | StartTask
+    | RetrySend
     | Timestamped Msg Time.Posix
     | GotTreeTest (Result Http.Error TreeTest.Study)
     | ResultsSent (Result Http.Error ())
@@ -302,6 +303,9 @@ updateLoaded msg model =
         NodeClicked node ->
             ( model, Task.perform (Timestamped (NodeClicked node)) Time.now )
 
+        RetrySend ->
+            ( model, sendResults model.id model.observations )
+
         NextQuestion ->
             ( model, Task.perform (Timestamped NextQuestion) Time.now )
 
@@ -356,7 +360,10 @@ postTask model =
                 par "Sending results..."
 
             Failed err ->
-                par <| "Sending results failed! " ++ HTTPExt.errorToString err
+                paragraph []
+                    [ UI.label [] <| "Sending results failed! " ++ HTTPExt.errorToString err
+                    , UI.button True "Retry" RetrySend
+                    ]
 
             Sent ->
                 par "Results sent!"
