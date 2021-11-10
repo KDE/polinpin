@@ -185,10 +185,10 @@ viewLoaded user shared model req =
 
                     _ ->
                         if List.length model.tests.tests > 0 then
-                            text <| "Welcome back, " ++ user.name ++ ". Here are your tree tests."
+                            text <| "welcome back, " ++ user.name ++ ". here are your tree tests."
 
                         else
-                            text <| "Welcome back, " ++ user.name ++ ". Ready to create a tree test?"
+                            text <| "welcome back, " ++ user.name ++ ". ready to create a tree test?"
                 , case model.creationStatus of
                     CreationIdle ->
                         el [ alignRight ] (UI.button True "create test" CreateTestClicked)
@@ -219,8 +219,7 @@ viewTests tests req =
 viewTest : Request.With Params -> TreeTest.TreeTestOverview -> Element Msg
 viewTest req test =
     row
-        [ Border.rounded 8
-        , Border.width 4
+        [ Border.width 4
         , width fill
         , padding 16
         , spacing 16
@@ -237,13 +236,13 @@ viewDialog model state =
         column [ spacing 16 ]
             (case state of
                 OpenCreate name ->
-                    [ row [ spacing 20, width fill ] [ UI.labelScaled 2 "create a new tree test", el [ alignRight ] (UI.button True "close" CloseDialog) ]
-                    , UI.textField name ChangeCurrentStudyName "Study Name"
+                    [ row [ spacing 20, width fill ] [ UI.labelScaled 2 "create a new tree test", el [ alignRight ] (UI.subduedButton True "close" CloseDialog) ]
+                    , UI.textField name ChangeCurrentStudyName "study name"
                     , el [ alignRight ] (UI.button True "create" (DoCreate name))
                     ]
 
                 OpenDelete name id ->
-                    [ row [ spacing 20, width fill ] [ UI.labelScaled 2 "delete a tree test", el [ alignRight ] (UI.button True "close" CloseDialog) ]
+                    [ row [ spacing 20, width fill ] [ UI.labelScaled 2 "delete a tree test", el [ alignRight ] (UI.subduedButton True "close" CloseDialog) ]
                     , text ("are you sure you want to delete " ++ name ++ "?")
                     , el [ alignRight ] (UI.destructiveButton True "delete" (DoDelete id))
                     ]

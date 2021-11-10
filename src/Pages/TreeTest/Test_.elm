@@ -477,7 +477,6 @@ signifier model (Tree.Node id cont _) =
                  else
                     rgb255 0 0 0
                 )
-            , Border.rounded 20
             , paddingXY 10 6
             , pointer
             , onClick (NodeClicked id)

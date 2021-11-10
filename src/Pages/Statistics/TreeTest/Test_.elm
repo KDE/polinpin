@@ -184,7 +184,7 @@ legend : Color -> String -> Element msg
 legend color key =
     let
         square =
-            el [ Background.color color, width (px 16), height (px 16), Border.rounded 4 ] none
+            el [ Background.color color, width (px 16), height (px 16) ] none
     in
     row [ spacing 4 ]
         [ square, UI.labelScaled -1 key ]

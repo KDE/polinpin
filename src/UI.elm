@@ -1,4 +1,4 @@
-module UI exposing (button, card, destructiveButton, dialog, edges, fontScaled, label, labelScaled, scaled, scaledInt, separator, subToolbar, tab, textField, with, withScrim, focus, inputStyles)
+module UI exposing (button, card, destructiveButton, dialog, edges, focus, fontScaled, inputStyles, label, labelScaled, scaled, scaledInt, separator, subToolbar, tab, textField, with, withScrim, subduedButton)
 
 import Browser.Navigation
 import Element exposing (..)
@@ -19,9 +19,11 @@ focus =
         [ Border.color <| rgb255 0x3D 0xAE 0xE9
         ]
 
+
 inputStyles : List (Attribute msg)
 inputStyles =
-    [ focus, Border.width 4, Border.color <| rgb255 0 0 0, Border.rounded 6 ]
+    [ focus, Border.width 4, Border.rounded 0, Border.color <| rgb255 0 0 0 ]
+
 
 scaled : Int -> Float
 scaled =
@@ -65,7 +67,6 @@ btn colors enabled textlabel msg =
             Background.color colors.disabled
         , Font.color colors.text
         , paddingXY 10 6
-        , Border.rounded 30
         , focus
         , Border.color <| rgb255 0 0 0
         , Border.width 4
@@ -85,6 +86,9 @@ button : Bool -> String -> msg -> Element msg
 button =
     btn { idle = rgb255 0xFF 0xE2 0x47, text = rgb255 0 0 0, pressed = rgb255 0xC4 0xAB 0x00, disabled = rgb255 0xE8 0xCB 0x2D }
 
+subduedButton : Bool -> String -> msg -> Element msg
+subduedButton =
+    btn { disabled = rgb255 0x99 0x99 0x99, idle = rgb255 0xdd 0xdd 0xdd, text = rgb255 0 0 0, pressed = rgb255 0xcc 0xcc 0xcc}
 
 destructiveButton : Bool -> String -> msg -> Element msg
 destructiveButton =
@@ -111,7 +115,6 @@ dialog child =
     el
         [ paddingXY 20 16
         , Background.color <| rgb255 255 255 255
-        , Border.rounded 4
         , Border.width 4
         , Border.color <| rgb255 0 0 0
         , centerX
@@ -133,7 +136,7 @@ textField currentText onChange textLabel =
 
 card : List (Attribute msg) -> Element msg -> Element msg
 card attrs =
-    el ([ padding 16, Border.color <| rgb255 0xEE 0xEE 0xEE, Border.width 1, Border.rounded 3 ] ++ attrs)
+    el ([ padding 16, Border.color <| rgb255 0xEE 0xEE 0xEE, Border.width 1 ] ++ attrs)
 
 
 separator : List (Attribute msg) -> Element msg
@@ -145,7 +148,6 @@ tab : String -> Bool -> msg -> Element msg
 tab txt active onClicked =
     Input.button
         [ paddingXY 10 8
-        , Border.roundEach { bottomLeft = 6, bottomRight = 6, topLeft = 0, topRight = 0 }
         , Background.color <|
             if active then
                 rgb255 0xAA 0xAA 0xAA

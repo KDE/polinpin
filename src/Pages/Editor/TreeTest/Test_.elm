@@ -316,7 +316,6 @@ viewTask model idx task =
     column
         [ padding 16
         , Border.width 4
-        , Border.rounded 6
         , width fill
         , spacing 8
         ]
@@ -373,7 +372,6 @@ viewTaskNode idx task (Tree.Node nID nData nChildren) =
                      else
                         rgb255 0 0 0
                     )
-                 , Border.rounded 20
                  , paddingXY 10 6
                  ]
                     ++ (if List.length nChildren > 0 then
