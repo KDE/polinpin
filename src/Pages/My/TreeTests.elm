@@ -24,7 +24,7 @@ page shared req =
         (\user ->
             { init = init user
             , update = update user
-            , view = view user shared
+            , view = view user shared req
             , subscriptions = subscriptions
             }
         )
@@ -77,6 +77,7 @@ type Msg
     | TestMade (Result Http.Error String)
     | TestDeleted (Result Http.Error ())
     | Delete String String
+    | DoCmd (Cmd Msg)
 
 
 update : Shared.User -> Msg -> Model -> ( Model, Cmd Msg )
@@ -87,6 +88,9 @@ update user msg model =
 
         ( MyTreeTestsLoaded (Err err), _ ) ->
             ( Failed err, Cmd.none )
+
+        ( DoCmd cmd, _ ) ->
+            ( model, cmd )
 
         ( _, Loaded loaded ) ->
             let
@@ -152,11 +156,11 @@ subscriptions model =
 -- VIEW
 
 
-view : Shared.User -> Shared.Model -> Model -> View Msg
-view user shared model =
+view : Shared.User -> Shared.Model  -> Request.With Params -> Model -> View Msg
+view user shared req model =
     case model of
         Loaded loaded ->
-            viewLoaded user shared loaded
+            viewLoaded user shared loaded req
 
         Loading ->
             viewLoading shared
@@ -165,8 +169,8 @@ view user shared model =
             viewLoadFailed shared error
 
 
-viewLoaded : Shared.User -> Shared.Model -> LoadedModel -> View Msg
-viewLoaded user shared model =
+viewLoaded : Shared.User -> Shared.Model -> LoadedModel -> Request.With Params -> View Msg
+viewLoaded user shared model req =
     let
         device =
             classifyDevice shared.dimensions
@@ -187,15 +191,15 @@ viewLoaded user shared model =
                             text <| "Welcome back, " ++ user.name ++ ". Ready to create a tree test?"
                 , case model.creationStatus of
                     CreationIdle ->
-                        el [ alignRight ] (UI.button True "Create Test" CreateTestClicked)
+                        el [ alignRight ] (UI.button True "create test" CreateTestClicked)
 
                     CreationPending ->
-                        el [ alignRight ] (UI.button False "Creating..." CreateTestClicked)
+                        el [ alignRight ] (UI.button False "creating..." CreateTestClicked)
 
                     CreationFailed _ ->
-                        el [ alignRight ] (UI.destructiveButton True "Creation failed! Try again?" CreateTestClicked)
+                        el [ alignRight ] (UI.destructiveButton True "creation failed! try again?" CreateTestClicked)
                 ]
-            , viewTests model.tests.tests
+            , viewTests model.tests.tests req
             ]
         )
         (case model.dialogState of
@@ -206,24 +210,24 @@ viewLoaded user shared model =
                 Just (viewDialog model model.dialogState))
 
 
-viewTests : List TreeTest.TreeTestOverview -> Element Msg
-viewTests tests =
+viewTests : List TreeTest.TreeTestOverview -> Request.With Params -> Element Msg
+viewTests tests req =
     column [ centerX, padding 16, width (fill |> maximum 800), spacing 16 ]
-        (List.map viewTest tests)
+        (List.map (viewTest req) tests)
 
 
-viewTest : TreeTest.TreeTestOverview -> Element Msg
-viewTest test =
+viewTest : Request.With Params -> TreeTest.TreeTestOverview -> Element Msg
+viewTest req test =
     row
-        [ Background.color <| rgb255 0xEE 0xF1 0xF5
-        , Border.rounded 8
+        [ Border.rounded 8
+        , Border.width 4
         , width fill
         , padding 16
         , spacing 16
         ]
         [ text test.name
-        , el [ alignRight ] <| UI.destructiveLink "delete test" (Delete test.name test.id)
-        , el [ alignRight ] <| UI.viewLink "edit test" (Gen.Route.Editor__TreeTest__Test_ { test = test.id })
+        , el [ alignRight ] <| UI.destructiveButton True "delete test" (Delete test.name test.id)
+        , el [ alignRight ] <| UI.button True "edit test" (DoCmd (Request.pushRoute (Gen.Route.Editor__TreeTest__Test_ { test = test.id }) req))
         ]
 
 
@@ -233,15 +237,15 @@ viewDialog model state =
         column [ spacing 16 ]
             (case state of
                 OpenCreate name ->
-                    [ row [ spacing 20, width fill ] [ UI.labelScaled 2 "Create a new tree test", el [ alignRight ] (UI.button True "Close" CloseDialog) ]
+                    [ row [ spacing 20, width fill ] [ UI.labelScaled 2 "create a new tree test", el [ alignRight ] (UI.button True "close" CloseDialog) ]
                     , UI.textField name ChangeCurrentStudyName "Study Name"
-                    , el [ alignRight ] (UI.button True "Create" (DoCreate name))
+                    , el [ alignRight ] (UI.button True "create" (DoCreate name))
                     ]
 
                 OpenDelete name id ->
-                    [ row [ spacing 20, width fill ] [ UI.labelScaled 2 "Delete a tree test", el [ alignRight ] (UI.button True "Close" CloseDialog) ]
-                    , text ("Are you sure you want to delete " ++ name ++ "?")
-                    , el [ alignRight ] (UI.destructiveButton True "Delete" (DoDelete id))
+                    [ row [ spacing 20, width fill ] [ UI.labelScaled 2 "delete a tree test", el [ alignRight ] (UI.button True "close" CloseDialog) ]
+                    , text ("are you sure you want to delete " ++ name ++ "?")
+                    , el [ alignRight ] (UI.destructiveButton True "delete" (DoDelete id))
                     ]
 
                 _ ->

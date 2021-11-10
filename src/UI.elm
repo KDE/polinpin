@@ -1,15 +1,27 @@
-module UI exposing (button, destructiveButton, dialog, fontScaled, label, labelScaled, scaled, scaledInt, subToolbar, textField, viewLink, with, withScrim, destructiveLink, card, tab, edges, separator)
+module UI exposing (button, card, destructiveButton, dialog, edges, fontScaled, label, labelScaled, scaled, scaledInt, separator, subToolbar, tab, textField, with, withScrim, focus, inputStyles)
 
+import Browser.Navigation
 import Element exposing (..)
 import Element.Background as Background
 import Element.Border as Border
+import Element.Events exposing (..)
 import Element.Font as Font
 import Element.Input as Input
 import Elements.Header
 import Gen.Route as Route exposing (Route)
+import Request
 import Shared
-import Element.Events exposing (..)
 
+
+focus : Attribute msg
+focus =
+    Element.focused
+        [ Border.color <| rgb255 0x3D 0xAE 0xE9
+        ]
+
+inputStyles : List (Attribute msg)
+inputStyles =
+    [ focus, Border.width 4, Border.color <| rgb255 0 0 0, Border.rounded 6 ]
 
 scaled : Int -> Float
 scaled =
@@ -28,7 +40,7 @@ fontScaled at =
 
 label : List (Attribute msg) -> String -> Element msg
 label attrs str =
-    el ((Font.size (scaled 0 |> round)) :: attrs) (text str)
+    el (Font.size (scaled 0 |> round) :: attrs) (text str)
 
 
 labelScaled : Int -> String -> Element msg
@@ -43,40 +55,21 @@ with shared els =
         (Elements.Header.view shared :: els)
 
 
-viewLink : String -> Route -> Element msg
-viewLink textLabel route =
-    link
-        [ Font.color (rgb255 0 0 255)
-        ]
-        { url = Route.toHref route
-        , label = text textLabel
-        }
-
-destructiveLink : String -> msg -> Element msg
-destructiveLink txt msg =
-    el
-        [ Font.color <| rgb255 0xe9 0x3d 0x58
-        , onClick msg
-        , pointer
-        ]
-        (text txt)
-
-
-button : Bool -> String -> msg -> Element msg
-button enabled textLabel msg =
+btn : { disabled : Color, pressed : Color, idle : Color, text : Color } -> Bool -> String -> msg -> Element msg
+btn colors enabled textlabel msg =
     Input.button
         [ if enabled then
-            Background.color <| rgb255 0xFF 0xE2 0x47
+            Background.color colors.idle
 
           else
-            Background.color <| rgb255 0xE8 0xCB 0x2D
-        , Font.color <| rgb255 0 0 0
+            Background.color colors.disabled
+        , Font.color colors.text
         , paddingXY 10 6
         , Border.rounded 30
-        , Element.focused
-            [ Background.color <| rgb255 0xE8 0xCB 0x2D ]
-        , Element.mouseDown
-            [ Background.color <| rgb255 0xC4 0xAB 0x00 ]
+        , focus
+        , Border.color <| rgb255 0 0 0
+        , Border.width 4
+        , Element.mouseDown [ Background.color colors.pressed ]
         ]
         { onPress =
             if enabled then
@@ -84,37 +77,26 @@ button enabled textLabel msg =
 
             else
                 Nothing
-        , label = el [ centerX ] (text textLabel)
+        , label = el [ centerX ] (text textlabel)
         }
+
+
+button : Bool -> String -> msg -> Element msg
+button =
+    btn { idle = rgb255 0xFF 0xE2 0x47, text = rgb255 0 0 0, pressed = rgb255 0xC4 0xAB 0x00, disabled = rgb255 0xE8 0xCB 0x2D }
 
 
 destructiveButton : Bool -> String -> msg -> Element msg
-destructiveButton enabled textLabel msg =
-    Input.button
-        [ if enabled then
-            Background.color <| rgb255 0xE9 0x3D 0x58
-
-          else
-            Background.color <| rgb255 100 100 100
-        , Font.color <| rgb255 255 255 255
-        , paddingXY 10 6
-        , Border.rounded 30
-        , Element.focused
-            [ Background.color <| rgb255 0xBF 0x00 0x39 ]
-        , Element.mouseDown
-            [ Background.color <| rgb255 0x99 0x00 0x2E ]
-        ]
-        { onPress = Just msg
-        , label = el [ centerX ] (text textLabel)
-        }
+destructiveButton =
+    btn { idle = rgb255 0xE9 0x3D 0x58, text = rgb255 255 255 255, pressed = rgb255 0x99 0x00 0x2E, disabled = rgb255 100 100 100 }
 
 
 subToolbar : List (Element msg) -> Element msg
 subToolbar =
     row
         [ padding 24
-        , Background.color <| rgb255 0x03 0x66 0x88
-        , Font.color <| rgb255 255 255 255
+        , Background.color <| rgb255 0xEE 0xEE 0xEE
+        , Font.color <| rgb255 0 0 0
         , width fill
         ]
 
@@ -130,6 +112,8 @@ dialog child =
         [ paddingXY 20 16
         , Background.color <| rgb255 255 255 255
         , Border.rounded 4
+        , Border.width 4
+        , Border.color <| rgb255 0 0 0
         , centerX
         , centerY
         ]
@@ -139,42 +123,44 @@ dialog child =
 textField : String -> (String -> msg) -> String -> Element msg
 textField currentText onChange textLabel =
     Input.username
-        []
+        inputStyles
         { onChange = onChange
         , text = currentText
         , placeholder = Nothing
         , label = Input.labelAbove [ fontScaled 1 ] (text textLabel)
         }
 
+
 card : List (Attribute msg) -> Element msg -> Element msg
 card attrs =
-    el ([ padding 16, Border.color <| rgb255 0xee 0xee 0xee, Border.width 1, Border.rounded 3 ] ++ attrs)
+    el ([ padding 16, Border.color <| rgb255 0xEE 0xEE 0xEE, Border.width 1, Border.rounded 3 ] ++ attrs)
+
 
 separator : List (Attribute msg) -> Element msg
 separator attrs =
-    el ([Background.color <| rgb255 0xee 0xf1 0xf5, width (px 1), height (px 1)] ++ attrs) none
+    el ([ Background.color <| rgb255 0xEE 0xF1 0xF5, width (px 1), height (px 1) ] ++ attrs) none
+
 
 tab : String -> Bool -> msg -> Element msg
 tab txt active onClicked =
-    el
+    Input.button
         [ paddingXY 10 8
-        , Border.roundEach { bottomLeft = 4, bottomRight = 4, topLeft = 0, topRight = 0 }
+        , Border.roundEach { bottomLeft = 6, bottomRight = 6, topLeft = 0, topRight = 0 }
         , Background.color <|
             if active then
-                rgb255 0x03 0x66 0x88
+                rgb255 0xAA 0xAA 0xAA
 
             else
-                rgb255 0xD1 0xD5 0xD9
-        , Font.color <|
-            if active then
-                rgb255 0xFF 0xFF 0xFF
-
-            else
-                rgb255 0x00 0x00 0x00
+                rgb255 0xEE 0xEE 0xEE
         , onClick onClicked
         , pointer
+        , focus
+        , Border.color <| rgb255 0x00 0x00 0x00
+        , Border.widthEach { bottom = 4, left = 4, right = 4, top = 0 }
         ]
-        (text txt)
+        { onPress = Just onClicked
+        , label = text txt
+        }
 
 
 edges : { left : number, right : number, bottom : number, top : number }

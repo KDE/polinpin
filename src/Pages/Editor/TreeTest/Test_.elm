@@ -306,7 +306,7 @@ viewTasks model =
     column
         [ spacing 8 ]
         (List.indexedMap (viewTask model) model.study.tasks
-            ++ [ UI.button True "New Task" NewTask
+            ++ [ UI.button True "new task" NewTask
                ]
         )
 
@@ -314,16 +314,14 @@ viewTasks model =
 viewTask : LoadedModel -> Int -> TreeTest.Task -> Element Msg
 viewTask model idx task =
     column
-        [ padding 8
-        , Background.color <| rgb255 0xEE 0xF1 0xF5
-        , Border.color <| rgb255 0x9B 0x9E 0xA2
-        , Border.width 1
+        [ padding 16
+        , Border.width 4
         , Border.rounded 6
         , width fill
         , spacing 8
         ]
         [ Input.text
-            []
+            UI.inputStyles
             { onChange = EditTaskText idx
             , text = task.text
             , placeholder = Nothing
@@ -345,7 +343,7 @@ viewTask model idx task =
                             |> Maybe.withDefault "Failed to find node"
                   in
                   el [ width fill ] (text label)
-                , UI.button True "Change" (ShowTaskTree idx)
+                , UI.button True "change" (ShowTaskTree idx)
                 ]
         ]
 
@@ -354,8 +352,8 @@ viewTaskNode : Int -> TreeTest.Task -> Tree.Node TreeTest.Item -> Element Msg
 viewTaskNode idx task (Tree.Node nID nData nChildren) =
     column
         [ paddingEach { edges | left = 10 }
-        , Border.color <| rgb255 0xD1 0xD5 0xD9
-        , Border.widthEach { edges | left = 2 }
+        , Border.color <| rgb255 0 0 0
+        , Border.widthEach { edges | left = 4 }
         , Border.dotted
         , spacing 8
         ]
@@ -398,8 +396,8 @@ viewTabs model =
             UI.tab label (model.activeTab == role) (TabClicked role)
 
         roles =
-            [ make "Tree" EditTree
-            , make "Tasks" EditTasks
+            [ make "tree" EditTree
+            , make "tasks" EditTasks
             ]
     in
     row [ paddingEach { edges | left = 8 }, spacing 6 ]
@@ -409,21 +407,21 @@ viewTabs model =
 viewHeader : LoadedModel -> Element Msg
 viewHeader model =
     UI.subToolbar
-        [ text <| "Editing " ++ model.study.name
+        [ text <| "editing " ++ model.study.name
         , el [ alignRight ]
             (case model.saveNotificationState of
                 SaveFailed ->
-                    UI.destructiveButton True "Save failed!" Save
+                    UI.destructiveButton True "save failed!" Save
 
                 SaveIdle ->
                     if model.study == model.oldStudy then
-                        UI.button False "Up To Date" Save
+                        UI.button False "up to date" Save
 
                     else
-                        UI.button True "Save" Save
+                        UI.button True "save" Save
 
                 SaveSucceeded ->
-                    UI.button True "Saved!" Save
+                    UI.button True "saved!" Save
             )
         ]
 
@@ -441,13 +439,13 @@ viewNode (Tree.Node id data children) =
     in
     column
         [ paddingEach { edges | left = 20 }
-        , Border.color <| rgb255 0xD1 0xD5 0xD9
-        , Border.widthEach { edges | left = 2 }
+        , Border.color <| rgb255 0 0 0
+        , Border.widthEach { edges | left = 4 }
         , Border.dotted
         , spacing 8
         ]
         (row [ spacing 4 ]
-            [ Input.text []
+            [ Input.text UI.inputStyles
                 { onChange = \str -> EditItem id str
                 , text = data.text
                 , placeholder = Nothing

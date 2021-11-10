@@ -5,7 +5,7 @@ import Http
 
 host : String
 host =
-    "https://api.polinpin.blackquill.cc"
+    "http://127.0.0.1:25727"
 
 
 requestWithHeaders : String -> { url : String, body : Http.Body, expect : Http.Expect msg, headers : List Http.Header } -> Cmd msg
