@@ -339,12 +339,12 @@ par txt =
 
 preTask : LoadedModel -> Element Msg
 preTask _ =
-    textColumn [ spacing 10, padding 24 ]
+    textColumn [ spacing 10, padding 24, width fill ]
         [ el [ Font.bold ] (text "Welcome")
-        , par "This is a study for KDE."
-        , par "You will be asked to find an item that helps you with a given task from list of links."
+        , par "This is a study for KDE, to help us make our software easier to use."
+        , par "You will be asked to find an item that helps you with a given task from a list of items."
         , par "Click through it until you find an item that you think helps you complete the given task."
-        , par "If you make a wrong turn you can go back by clicking one of the links above."
+        , par "If you make a wrong turn you can go back by clicking one of the items above."
         , par "Remember, this isn't a test of your ability. There are no right or wrong answers."
         , UI.button True "Get Started" NextQuestion
         ]
@@ -384,9 +384,9 @@ taskCount model =
 
 header : LoadedModel -> AnsweredTask -> Element msg
 header model question =
-    textColumn [ spacing 8 ]
+    textColumn [ spacing 8, width fill ]
         [ el [ Font.bold ] (text <| taskCount model)
-        , text question.task.text
+        , par question.task.text
         ]
 
 
@@ -497,7 +497,7 @@ viewNode model isRoot ((Tree.Node id _ children) as node) =
                         20
             }
         ]
-        [ row
+        [ wrappedRow
             [ spacing 20 ]
             [ signifier model node
             , if id == model.selectedNode && List.length children == 0 then
