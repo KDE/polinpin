@@ -319,12 +319,13 @@ viewTask model idx task =
         , width fill
         , spacing 8
         ]
-        [ Input.text
-            UI.inputStyles
+        [ Input.multiline
+            ((width (fill |> maximum 500)) :: UI.inputStyles)
             { onChange = EditTaskText idx
             , text = task.text
             , placeholder = Nothing
             , label = Input.labelAbove [ Font.size 16 ] (text "Task text")
+            , spellcheck = True
             }
         , el [ Font.size 16 ] (text "Task answer")
         , if model.showingTaskTree == idx then

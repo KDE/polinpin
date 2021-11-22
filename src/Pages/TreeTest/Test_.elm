@@ -341,7 +341,7 @@ preTask : LoadedModel -> Element Msg
 preTask _ =
     textColumn [ spacing 10, padding 24 ]
         [ el [ Font.bold ] (text "Welcome")
-        , par "This is a study for TODO."
+        , par "This is a study for KDE."
         , par "You will be asked to find an item that helps you with a given task from list of links."
         , par "Click through it until you find an item that you think helps you complete the given task."
         , par "If you make a wrong turn you can go back by clicking one of the links above."
