@@ -136,12 +136,12 @@ textField currentText onChange textLabel =
 
 card : List (Attribute msg) -> Element msg -> Element msg
 card attrs =
-    el ([ padding 16, Border.color <| rgb255 0xEE 0xEE 0xEE, Border.width 1 ] ++ attrs)
+    el ([ padding 16, Border.color <| rgb255 0x00 0x00 0x00, Border.width 4 ] ++ attrs)
 
 
 separator : List (Attribute msg) -> Element msg
 separator attrs =
-    el ([ Background.color <| rgb255 0xEE 0xF1 0xF5, width (px 1), height (px 1) ] ++ attrs) none
+    el ([ Background.color <| rgb255 0x00 0x00 0x00, width (px 4), height (px 4) ] ++ attrs) none
 
 
 tab : String -> Bool -> msg -> Element msg

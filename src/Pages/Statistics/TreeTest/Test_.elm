@@ -138,7 +138,7 @@ cardCont : String -> Float -> String -> Color -> Element msg
 cardCont title percent desc color =
     titledCard title
         [ width fill ]
-        [ el [ centerX, Font.color color ] <| UI.labelScaled 5 (String.fromInt (round (percent * 100.0)) ++ "%")
+        [ el [ centerX, Background.color color, Font.color <| rgb255 0xff 0xff 0xff, padding 12 ] <| UI.labelScaled 5 (String.fromInt (round (percent * 100.0)) ++ "%")
         , el [ centerX ] <| UI.labelScaled -1 desc
         ]
 
@@ -151,7 +151,7 @@ taskStatistics userCount num stats =
     in
     column [ width fill, spacing 8 ]
         [ UI.labelScaled -1 ("Task " ++ String.fromInt num)
-        , row [ width fill ]
+        , row [ width fill, Border.color <| rgb255 0x00 0x00 0x00, Border.width 4 ]
             [ item ((toFloat stats.incorrectDirect) / (toFloat userCount)) colorIncorrectDirect
             , item ((toFloat stats.incorrectIndirect) / (toFloat userCount)) colorIncorrectIndirect
             , item ((toFloat stats.correctIndirect) / (toFloat userCount)) colorCorrectIndirect
@@ -184,7 +184,7 @@ legend : Color -> String -> Element msg
 legend color key =
     let
         square =
-            el [ Background.color color, width (px 16), height (px 16) ] none
+            el [ Background.color color, width (px <| 16 + (4*2)), height (px <| 16 + (4*2)), Border.width 4, Border.color <| rgb255 0x00 0x00 0x00 ] none
     in
     row [ spacing 4 ]
         [ square, UI.labelScaled -1 key ]
@@ -209,7 +209,7 @@ viewStatistics shared model =
     column [ centerX, padding 16, width (fill |> maximum 800), spacing 16 ]
         [ wrappedRow [ width fill, spacing 32 ]
             [ UI.card [ width fill ]
-                (cardCont "Success" model.statistics.percentCorrect "Average sucecss rate across all tasks." (rgb255 0x00 0x93 0x56))
+                (cardCont "Success" model.statistics.percentCorrect "Average success rate across all tasks." (rgb255 0x00 0x93 0x56))
             , UI.card [ width fill ]
                 (cardCont "Directness" model.statistics.percentDirect "Percentage of tasks completed without backtracking." (rgb255 0x00 0x92 0x7E))
             ]
@@ -265,7 +265,7 @@ viewTaskStats tree idx (task, stats) =
     UI.card [ width fill ]
         ( column [ spacing 16, width fill ]
             [ UI.labelScaled -2 ("Task " ++ (String.fromInt (idx + 1)))
-            , UI.label [] task.text
+            , paragraph [] [UI.label [] task.text]
             , (UI.labelScaled -1 label)
             , UI.separator [ width fill ]
             , UI.label [] "Correct"
