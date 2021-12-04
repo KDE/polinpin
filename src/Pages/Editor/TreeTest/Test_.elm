@@ -62,6 +62,7 @@ type alias LoadedModel =
     , activeTab : ActiveTab
     , showingTaskTree : Int
     , saveNotificationState : SaveNotificationState
+    , onShelf : Maybe Tree.ID
     }
 
 
@@ -80,6 +81,10 @@ init id =
 
 type Msg
     = EditItem Tree.ID String
+    | PutOnShelf Tree.ID
+    | TakeOffShelfBefore Tree.ID
+    | TakeOffShelfAfter Tree.ID
+    | PutBack
     | NewNode Tree.ID
     | DeleteNode Tree.ID
     | TabClicked ActiveTab
@@ -97,7 +102,7 @@ update : Shared.User -> String -> Msg -> Model -> ( Model, Cmd Msg )
 update user studyID msg model =
     case ( msg, model ) of
         ( GotStudy (Ok study), _ ) ->
-            ( Loaded <| LoadedModel study study 0 EditTree -1 SaveIdle, Cmd.none )
+            ( Loaded <| LoadedModel study study 0 EditTree -1 SaveIdle Nothing, Cmd.none )
 
         ( GotStudy (Err error), _ ) ->
             ( Failed error, Cmd.none )
@@ -155,10 +160,35 @@ goIdleMsg =
 updateLoaded : Shared.User -> String -> Msg -> LoadedModel -> ( LoadedModel, Cmd Msg )
 updateLoaded user studyID msg model =
     let
+        meg =
+            Debug.log "updateLoaded msg" msg
+
         study =
             model.study
     in
     case msg of
+        PutOnShelf item ->
+            ( { model | onShelf = Just item }, Cmd.none )
+
+        TakeOffShelfBefore at ->
+            case model.onShelf of
+                Just item ->
+                    ( { model | onShelf = Nothing, study = { study | tree = study.tree |> Tree.moveBefore item at } }, Cmd.none )
+
+                _ ->
+                    ( { model | onShelf = Nothing }, Cmd.none )
+
+        TakeOffShelfAfter at ->
+            case model.onShelf of
+                Just item ->
+                    ( { model | onShelf = Nothing, study = { study | tree = study.tree |> Tree.moveAfter item at } }, Cmd.none )
+
+                _ ->
+                    ( { model | onShelf = Nothing }, Cmd.none )
+
+        PutBack ->
+            ( { model | onShelf = Nothing }, Cmd.none )
+
         EditItem id cont ->
             ( setRootNode model <| Tree.mapID id (\it -> { it | text = cont }) model.study.tree, Cmd.none )
 
@@ -290,7 +320,7 @@ viewLoaded shared model =
                 , el [ padding 16 ]
                     (case model.activeTab of
                         EditTree ->
-                            viewNode model.study.tree
+                            viewNode True model model.study.tree
 
                         EditTasks ->
                             viewTasks model
@@ -320,7 +350,7 @@ viewTask model idx task =
         , spacing 8
         ]
         [ Input.multiline
-            ((width (fill |> maximum 500)) :: UI.inputStyles)
+            (width (fill |> maximum 500) :: UI.inputStyles)
             { onChange = EditTaskText idx
             , text = task.text
             , placeholder = Nothing
@@ -430,26 +460,14 @@ edges =
     { left = 0, top = 0, bottom = 0, right = 0 }
 
 
-viewNode : Tree.Node TreeTest.Item -> Element Msg
-viewNode (Tree.Node id data children) =
+viewNode : Bool -> LoadedModel -> Tree.Node TreeTest.Item -> Element Msg
+viewNode isRoot model (Tree.Node id data children) =
     let
         isEmpty =
             List.length children == 0
-    in
-    column
-        [ paddingEach { edges | left = 20 }
-        , Border.color <| rgb255 0 0 0
-        , Border.widthEach { edges | left = 4 }
-        , Border.dotted
-        , spacing 8
-        ]
-        (row [ spacing 4 ]
-            [ Input.text UI.inputStyles
-                { onChange = \str -> EditItem id str
-                , text = data.text
-                , placeholder = Nothing
-                , label = Input.labelHidden "node name"
-                }
+
+        nonShelfActions =
+            [ UI.button True "move" (PutOnShelf id)
             , if isEmpty then
                 UI.button True "add children" (NewNode id)
 
@@ -457,11 +475,88 @@ viewNode (Tree.Node id data children) =
                 none
             , UI.destructiveButton True "delete" (DeleteNode id)
             ]
-            :: List.map viewNode children
-            ++ [ if not isEmpty then
-                    UI.button True "+" (NewNode id)
 
-                 else
-                    none
-               ]
+        currentlyShelfingActions =
+            [ UI.epheremalButton True "move before this" (TakeOffShelfBefore id)
+            , UI.epheremalButton True "move after this" (TakeOffShelfAfter id)
+            ]
+
+        shelfActions =
+            [ UI.button True "cancel move" PutBack ]
+
+        actions =
+            if isRoot then
+                [ none ]
+
+            else
+                case model.onShelf of
+                    Just item ->
+                        if item == id then
+                            shelfActions
+
+                        else
+                            currentlyShelfingActions
+
+                    _ ->
+                        nonShelfActions
+
+        trailing =
+            [ if not isEmpty then
+                UI.button True "+" (NewNode id)
+
+              else
+                none
+            ]
+
+        childs =
+            List.map (viewNode False model) children
+    in
+    column
+        [ paddingEach { edges | left = 20 }
+        , Border.color <| rgb255 0 0 0
+        , Border.widthEach { edges | left = 4 }
+        , Border.dotted
+        , spacing 8
+        , case model.onShelf of
+            Just item ->
+                if item == id then
+                    alpha 0.5
+
+                else
+                    alpha 1.0
+
+            Nothing ->
+                alpha 1.0
+        ]
+        (row [ spacing 4 ]
+            (Input.text UI.inputStyles
+                { onChange = \str -> EditItem id str
+                , text = data.text
+                , placeholder = Nothing
+                , label = Input.labelHidden "node name"
+                }
+                :: actions
+            )
+            :: (case model.onShelf of
+                    Just item ->
+                        if item == id then
+                            []
+
+                        else
+                            childs
+
+                    _ ->
+                        childs
+               )
+            ++ (case model.onShelf of
+                    Just item ->
+                        if item == id then
+                            []
+
+                        else
+                            trailing
+
+                    _ ->
+                        trailing
+               )
         )

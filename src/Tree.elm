@@ -1,4 +1,4 @@
-module Tree exposing (ID(..), Node(..), any, appendID, containsID, count, delete, encodeNode, makeLeaf, map, mapID, nodeByID, nodeByIDWithParents, nodeDecoder, uniqueIntID)
+module Tree exposing (ID(..), Node(..), any, appendID, containsID, count, delete, encodeNode, makeLeaf, map, mapID, nodeByID, nodeByIDWithParents, nodeDecoder, uniqueIntID, moveBefore, moveAfter, appendBeforeNode, appendAfterNode)
 
 import Json.Decode as D
 import Json.Encode as E
@@ -96,6 +96,31 @@ delete id (Node nid ndata nchildren) =
     in
     Node nid ndata (List.map (delete id) (List.filter filter nchildren))
 
+moveBefore : ID -> ID -> Node a -> Node a
+moveBefore item before node =
+    case nodeByID item node of
+        Just itemBeingMoved ->
+            let
+                modified =
+                    delete item node
+            in
+            appendBeforeNode itemBeingMoved before modified
+
+        Nothing ->
+            node
+
+moveAfter : ID -> ID -> Node a -> Node a
+moveAfter item after node =
+    case nodeByID item node of
+        Just itemBeingMoved ->
+            let
+                modified =
+                    delete item node
+            in
+            appendAfterNode itemBeingMoved after modified
+
+        Nothing ->
+            node
 
 count : Node a -> Int
 count (Node _ _ children) =
@@ -119,6 +144,43 @@ mapID targetID f (Node id data children) =
     in
     Node id (mapOne id data) (List.map (mapID targetID f) children)
 
+appendBeforeNode : Node a -> ID -> Node a -> Node a
+appendBeforeNode newNode appendBefore appendUnder =
+    let
+        before =
+            \((Node fID _ _) as fnode) ->
+                if fID == appendBefore then
+                    [newNode, fnode]
+                else
+                    [fnode]
+
+        f =
+            \(Node fID fData fChildren) ->
+                Node fID fData (List.concatMap before fChildren)
+
+        (Node nID nData nChildren) =
+            f appendUnder
+    in
+    Node nID nData (List.map (appendBeforeNode newNode appendBefore) nChildren)
+
+appendAfterNode : Node a -> ID -> Node a -> Node a
+appendAfterNode newNode appendAfter appendUnder =
+    let
+        after =
+            \((Node fID _ _) as fnode) ->
+                if fID == appendAfter then
+                    [fnode, newNode]
+                else
+                    [fnode]
+
+        f =
+            \(Node fID fData fChildren) ->
+                Node fID fData (List.concatMap after fChildren)
+
+        (Node nID nData nChildren) =
+            f appendUnder
+    in
+    Node nID nData (List.map (appendAfterNode newNode appendAfter) nChildren)
 
 appendID : ID -> Node a -> Node a -> Node a
 appendID id newNode appendUnder =

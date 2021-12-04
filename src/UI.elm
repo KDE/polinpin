@@ -1,4 +1,4 @@
-module UI exposing (button, card, destructiveButton, dialog, edges, focus, fontScaled, inputStyles, label, labelScaled, scaled, scaledInt, separator, subToolbar, tab, textField, with, withScrim, subduedButton)
+module UI exposing (button, card, destructiveButton, dialog, edges, focus, fontScaled, inputStyles, label, labelScaled, scaled, scaledInt, separator, subToolbar, tab, textField, with, withScrim, subduedButton, epheremalButton)
 
 import Browser.Navigation
 import Element exposing (..)
@@ -85,6 +85,15 @@ btn colors enabled textlabel msg =
 button : Bool -> String -> msg -> Element msg
 button =
     btn { idle = rgb255 0xFF 0xE2 0x47, text = rgb255 0 0 0, pressed = rgb255 0xC4 0xAB 0x00, disabled = rgb255 0xE8 0xCB 0x2D }
+
+epheremalButton : Bool -> String -> msg -> Element msg
+epheremalButton =
+    btn { idle = rgb255 0xb6 0xe5 0x21
+        , text = rgb255 0 0 0
+        , pressed = rgb255 0x99 0xc9 0x00
+        , disabled = rgb255 0xE8 0xCB 0x2D
+        }
+
 
 subduedButton : Bool -> String -> msg -> Element msg
 subduedButton =
