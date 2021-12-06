@@ -160,9 +160,6 @@ goIdleMsg =
 updateLoaded : Shared.User -> String -> Msg -> LoadedModel -> ( LoadedModel, Cmd Msg )
 updateLoaded user studyID msg model =
     let
-        meg =
-            Debug.log "updateLoaded msg" msg
-
         study =
             model.study
     in
