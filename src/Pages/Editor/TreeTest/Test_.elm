@@ -498,7 +498,7 @@ viewNode isRoot model (Tree.Node id data children) =
                         nonShelfActions
 
         trailing =
-            [ if not isEmpty then
+            [ if (not isEmpty) || isRoot then
                 UI.button True "+" (NewNode id)
 
               else
