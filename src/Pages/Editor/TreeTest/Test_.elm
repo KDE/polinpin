@@ -9,8 +9,6 @@ import Element.Input as Input
 import Gen.Params.Editor.TreeTest.Test_ exposing (Params)
 import HTTPExt
 import Http
-import Json.Decode as D
-import Json.Encode as E
 import Page
 import Process
 import Request
@@ -20,6 +18,7 @@ import Tree
 import TreeTest
 import UI
 import View exposing (View)
+import Gen.Route as Route
 
 
 page : Shared.Model -> Request.With Params -> Page.With Model Msg
@@ -57,6 +56,7 @@ type SaveNotificationState
 
 type alias LoadedModel =
     { study : TreeTest.Study
+    , studyID : String
     , oldStudy : TreeTest.Study
     , count : Int
     , activeTab : ActiveTab
@@ -102,7 +102,7 @@ update : Shared.User -> String -> Msg -> Model -> ( Model, Cmd Msg )
 update user studyID msg model =
     case ( msg, model ) of
         ( GotStudy (Ok study), _ ) ->
-            ( Loaded <| LoadedModel study study 0 EditTree -1 SaveIdle Nothing, Cmd.none )
+            ( Loaded <| LoadedModel study studyID study 0 EditTree -1 SaveIdle Nothing, Cmd.none )
 
         ( GotStudy (Err error), _ ) ->
             ( Failed error, Cmd.none )
@@ -272,7 +272,7 @@ updateLoaded user studyID msg model =
 
 
 subscriptions : Model -> Sub Msg
-subscriptions model =
+subscriptions _ =
     Sub.none
 
 
@@ -434,6 +434,8 @@ viewHeader : LoadedModel -> Element Msg
 viewHeader model =
     UI.subToolbar
         [ text <| "editing " ++ model.study.name
+        , el [ alignRight ]
+            (UI.linkButton "view statistics" (Route.Statistics__TreeTest__Test_ { test = model.studyID }))
         , el [ alignRight ]
             (case model.saveNotificationState of
                 SaveFailed ->

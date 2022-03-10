@@ -10,7 +10,7 @@ import Shared
 viewLink : String -> Route -> Element msg
 viewLink label route =
     link
-        [ Font.color (rgb255 0x30 0x6f 0x91)
+        [ Font.color (rgb255 0x30 0x6F 0x91)
         , alignRight
         ]
         { url = Route.toHref route
@@ -29,12 +29,11 @@ view shared =
         ]
         [ el
             [ alignLeft ]
-            ( text "polinpin" )
+            (text "polinpin")
         , row
             [ alignRight, spacing 20 ]
-            ([ viewLink "home" Route.Home_
-             ]
-                ++ (case shared.storage.user of
+            (viewLink "home" Route.Home_
+                :: (case shared.storage.user of
                         Just _ ->
                             [ viewLink "my tree tests" Route.My__TreeTests
                             ]

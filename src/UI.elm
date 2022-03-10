@@ -1,6 +1,5 @@
-module UI exposing (button, card, destructiveButton, dialog, edges, focus, fontScaled, inputStyles, label, labelScaled, scaled, scaledInt, separator, subToolbar, tab, textField, with, withScrim, subduedButton, epheremalButton)
+module UI exposing (button, card, destructiveButton, dialog, edges, epheremalButton, focus, fontScaled, inputStyles, label, labelScaled, linkBtn, scaled, scaledInt, separator, subToolbar, subduedButton, tab, textField, with, withScrim, destructiveLinkButton, subduedLinkButton, epheremalLinkButton, linkButton)
 
-import Browser.Navigation
 import Element exposing (..)
 import Element.Background as Background
 import Element.Border as Border
@@ -9,7 +8,6 @@ import Element.Font as Font
 import Element.Input as Input
 import Elements.Header
 import Gen.Route as Route exposing (Route)
-import Request
 import Shared
 
 
@@ -57,21 +55,30 @@ with shared els =
         (Elements.Header.view shared :: els)
 
 
-btn : { disabled : Color, pressed : Color, idle : Color, text : Color } -> Bool -> String -> msg -> Element msg
+type alias ButtonColor =
+    { disabled : Color, pressed : Color, idle : Color, text : Color }
+
+
+btnStyle : ButtonColor -> Bool -> List (Attr () msg)
+btnStyle colors enabled =
+    [ if enabled then
+        Background.color colors.idle
+
+      else
+        Background.color colors.disabled
+    , Font.color colors.text
+    , paddingXY 10 6
+    , focus
+    , Border.color <| rgb255 0 0 0
+    , Border.width 4
+    , Element.mouseDown [ Background.color colors.pressed ]
+    ]
+
+
+btn : ButtonColor -> Bool -> String -> msg -> Element msg
 btn colors enabled textlabel msg =
     Input.button
-        [ if enabled then
-            Background.color colors.idle
-
-          else
-            Background.color colors.disabled
-        , Font.color colors.text
-        , paddingXY 10 6
-        , focus
-        , Border.color <| rgb255 0 0 0
-        , Border.width 4
-        , Element.mouseDown [ Background.color colors.pressed ]
-        ]
+        (btnStyle colors enabled)
         { onPress =
             if enabled then
                 Just msg
@@ -82,26 +89,77 @@ btn colors enabled textlabel msg =
         }
 
 
+linkBtn : ButtonColor -> String -> Route -> Element msg
+linkBtn colors textLabel route =
+    link
+        (btnStyle colors True)
+        { url = Route.toHref route
+        , label = el [ centerX ] (text textLabel)
+        }
+
+
+normalButtonStyle : ButtonColor
+normalButtonStyle =
+    { idle = rgb255 0xFF 0xE2 0x47, text = rgb255 0 0 0, pressed = rgb255 0xC4 0xAB 0x00, disabled = rgb255 0xE8 0xCB 0x2D }
+
+
 button : Bool -> String -> msg -> Element msg
 button =
-    btn { idle = rgb255 0xFF 0xE2 0x47, text = rgb255 0 0 0, pressed = rgb255 0xC4 0xAB 0x00, disabled = rgb255 0xE8 0xCB 0x2D }
+    btn normalButtonStyle
+
+
+linkButton : String -> Route -> Element msg
+linkButton =
+    linkBtn normalButtonStyle
+
 
 epheremalButton : Bool -> String -> msg -> Element msg
 epheremalButton =
-    btn { idle = rgb255 0xb6 0xe5 0x21
-        , text = rgb255 0 0 0
-        , pressed = rgb255 0x99 0xc9 0x00
-        , disabled = rgb255 0xE8 0xCB 0x2D
-        }
+    btn epheremalButtonStyle
+
+
+epheremalLinkButton : String -> Route -> Element msg
+epheremalLinkButton =
+    linkBtn normalButtonStyle
+
+
+epheremalButtonStyle : { idle : Color, text : Color, pressed : Color, disabled : Color }
+epheremalButtonStyle =
+    { idle = rgb255 0xB6 0xE5 0x21
+    , text = rgb255 0 0 0
+    , pressed = rgb255 0x99 0xC9 0x00
+    , disabled = rgb255 0xE8 0xCB 0x2D
+    }
 
 
 subduedButton : Bool -> String -> msg -> Element msg
 subduedButton =
-    btn { disabled = rgb255 0x99 0x99 0x99, idle = rgb255 0xdd 0xdd 0xdd, text = rgb255 0 0 0, pressed = rgb255 0xcc 0xcc 0xcc}
+    btn subduedButtonStyle
+
+
+subduedLinkButton : String -> Route -> Element msg
+subduedLinkButton =
+    linkBtn subduedButtonStyle
+
+
+subduedButtonStyle : ButtonColor
+subduedButtonStyle =
+    { disabled = rgb255 0x99 0x99 0x99, idle = rgb255 0xDD 0xDD 0xDD, text = rgb255 0 0 0, pressed = rgb255 0xCC 0xCC 0xCC }
+
 
 destructiveButton : Bool -> String -> msg -> Element msg
 destructiveButton =
-    btn { idle = rgb255 0xE9 0x3D 0x58, text = rgb255 255 255 255, pressed = rgb255 0x99 0x00 0x2E, disabled = rgb255 100 100 100 }
+    btn destructiveButtonStyle
+
+
+destructiveLinkButton : String -> Route -> Element msg
+destructiveLinkButton =
+    linkBtn destructiveButtonStyle
+
+
+destructiveButtonStyle : ButtonColor
+destructiveButtonStyle =
+    { idle = rgb255 0xE9 0x3D 0x58, text = rgb255 255 255 255, pressed = rgb255 0x99 0x00 0x2E, disabled = rgb255 100 100 100 }
 
 
 subToolbar : List (Element msg) -> Element msg
@@ -111,6 +169,7 @@ subToolbar =
         , Background.color <| rgb255 0xEE 0xEE 0xEE
         , Font.color <| rgb255 0 0 0
         , width fill
+        , spacing 16
         ]
 
 

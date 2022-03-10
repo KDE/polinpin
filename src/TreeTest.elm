@@ -3,7 +3,6 @@ module TreeTest exposing (..)
 import Http
 import Json.Decode as D
 import Json.Encode as E
-import Task
 import Tree
 import Web
 

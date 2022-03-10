@@ -2,15 +2,11 @@ module Pages.Login exposing (Model, Msg, page)
 
 import Effect exposing (Effect)
 import Element exposing (..)
-import Element.Background as Background
-import Element.Border as Border
 import Element.Events exposing (..)
-import Element.Font as Font
 import Element.Input as Input
 import Gen.Params.Login exposing (Params)
 import HTTPExt
 import Http
-import Json.Decode as D
 import Json.Encode as E
 import Page
 import Request
@@ -22,7 +18,7 @@ import Web
 
 
 page : Shared.Model -> Request.With Params -> Page.With Model Msg
-page shared req =
+page shared _ =
     Page.advanced
         { init = init
         , update = update
@@ -138,7 +134,7 @@ update msg model =
 
 
 subscriptions : Model -> Sub Msg
-subscriptions model =
+subscriptions _ =
     Sub.none
 
 

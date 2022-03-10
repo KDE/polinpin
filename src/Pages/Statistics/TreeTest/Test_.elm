@@ -1,7 +1,5 @@
 module Pages.Statistics.TreeTest.Test_ exposing (Model, Msg, page)
 
-import Chart as C
-import Chart.Attributes as CA
 import Element exposing (..)
 import Element.Background as Background
 import Element.Border as Border
@@ -13,11 +11,10 @@ import Http
 import Page
 import Request
 import Shared
-import TreeTest
-import UI
-import View exposing (View)
-import UI exposing (edges)
 import Tree
+import TreeTest
+import UI exposing (edges)
+import View exposing (View)
 
 
 page : Shared.Model -> Request.With Params -> Page.With Model Msg
@@ -47,9 +44,11 @@ type alias LoadedModel =
     , activeTab : Tab
     }
 
+
 type Tab
     = Overview
     | PerTaskStats
+
 
 init : Shared.User -> String -> ( Model, Cmd Msg )
 init user test =
@@ -103,7 +102,7 @@ updateLoaded msg model =
 
 
 subscriptions : Model -> Sub Msg
-subscriptions model =
+subscriptions _ =
     Sub.none
 
 
@@ -138,7 +137,7 @@ cardCont : String -> Float -> String -> Color -> Element msg
 cardCont title percent desc color =
     titledCard title
         [ width fill ]
-        [ el [ centerX, Background.color color, Font.color <| rgb255 0xff 0xff 0xff, padding 12 ] <| UI.labelScaled 5 (String.fromInt (round (percent * 100.0)) ++ "%")
+        [ el [ centerX, Background.color color, Font.color <| rgb255 0xFF 0xFF 0xFF, padding 12 ] <| UI.labelScaled 5 (String.fromInt (round (percent * 100.0)) ++ "%")
         , el [ centerX ] <| UI.labelScaled -1 desc
         ]
 
@@ -152,42 +151,43 @@ taskStatistics userCount num stats =
     column [ width fill, spacing 8 ]
         [ UI.labelScaled -1 ("Task " ++ String.fromInt num)
         , row [ width fill, Border.color <| rgb255 0x00 0x00 0x00, Border.width 4 ]
-            [ item ((toFloat stats.incorrectDirect) / (toFloat userCount)) colorIncorrectDirect
-            , item ((toFloat stats.incorrectIndirect) / (toFloat userCount)) colorIncorrectIndirect
-            , item ((toFloat stats.correctIndirect) / (toFloat userCount)) colorCorrectIndirect
-            , item ((toFloat stats.correctDirect) / (toFloat userCount)) colorCorrectDirect
+            [ item (toFloat stats.incorrectDirect / toFloat userCount) colorIncorrectDirect
+            , item (toFloat stats.incorrectIndirect / toFloat userCount) colorIncorrectIndirect
+            , item (toFloat stats.correctIndirect / toFloat userCount) colorCorrectIndirect
+            , item (toFloat stats.correctDirect / toFloat userCount) colorCorrectDirect
             ]
         ]
 
 
 colorIncorrectDirect : Color
 colorIncorrectDirect =
-    rgb255 255 0 0
+    rgb255 0xe9 0x3d 0x58
 
 
 colorIncorrectIndirect : Color
 colorIncorrectIndirect =
-    rgb255 0xFF 0xA5 0x00
+    rgb255 0xef 0x97 0x3c
 
 
 colorCorrectIndirect : Color
 colorCorrectIndirect =
-    rgb255 0x99 0x32 0xCC
+    rgb255 0xb8 0x75 0xdc
 
 
 colorCorrectDirect : Color
 colorCorrectDirect =
-    rgb255 0 255 0
+    rgb255 0x3d 0xd4 0x25
 
 
 legend : Color -> String -> Element msg
 legend color key =
     let
         square =
-            el [ Background.color color, width (px <| 16 + (4*2)), height (px <| 16 + (4*2)), Border.width 4, Border.color <| rgb255 0x00 0x00 0x00 ] none
+            el [ Background.color color, width (px <| 16 + (4 * 2)), height (px <| 16 + (4 * 2)), Border.width 4, Border.color <| rgb255 0x00 0x00 0x00 ] none
     in
     row [ spacing 4 ]
         [ square, UI.labelScaled -1 key ]
+
 
 viewTabs : LoadedModel -> Element Msg
 viewTabs model =
@@ -205,9 +205,32 @@ viewTabs model =
 
 
 viewStatistics : Shared.Model -> LoadedModel -> Element Msg
-viewStatistics shared model =
+viewStatistics _ model =
     column [ centerX, padding 16, width (fill |> maximum 800), spacing 16 ]
-        [ wrappedRow [ width fill, spacing 32 ]
+        [ if model.statistics.userCount < 10 then
+            UI.card [ width fill, Border.color <| rgb255 0xE9 0x64 0x3A ] <|
+                column
+                    [ spacing 20 ]
+                    [ el
+                        [ padding 8
+                        , Background.color <| rgb255 0xE9 0x64 0x3A
+                        , Font.color <| rgb255 255 255 255
+                        ]
+                      <|
+                        UI.labelScaled 2 "Notice"
+                    , paragraph []
+                        [ UI.label []
+                            ("This study only has "
+                                ++ String.fromInt model.statistics.userCount
+                                ++ " responses."
+                                ++ " This is generally too few people to make conclusions about."
+                            )
+                        ]
+                    ]
+
+          else
+            none
+        , wrappedRow [ width fill, spacing 32 ]
             [ UI.card [ width fill ]
                 (cardCont "Success" model.statistics.percentCorrect "Average success rate across all tasks." (rgb255 0x00 0x93 0x56))
             , UI.card [ width fill ]
@@ -247,12 +270,14 @@ viewStatistics shared model =
             )
         ]
 
-zip : List a -> List b -> List (a, b)
+
+zip : List a -> List b -> List ( a, b )
 zip =
     List.map2 Tuple.pair
 
-viewTaskStats : Tree.Node TreeTest.Item -> Int -> (TreeTest.Task, TreeTest.TaskStatistics) -> Element Msg
-viewTaskStats tree idx (task, stats) =
+
+viewTaskStats : Tree.Node TreeTest.Item -> Int -> ( TreeTest.Task, TreeTest.TaskStatistics ) -> Element Msg
+viewTaskStats tree idx ( task, stats ) =
     let
         gText (Tree.Node _ cont _) =
             cont.text
@@ -263,31 +288,32 @@ viewTaskStats tree idx (task, stats) =
                 |> Maybe.withDefault "Failed to find node"
     in
     UI.card [ width fill ]
-        ( column [ spacing 16, width fill ]
-            [ UI.labelScaled -2 ("Task " ++ (String.fromInt (idx + 1)))
-            , paragraph [] [UI.label [] task.text]
-            , (UI.labelScaled -1 label)
+        (column [ spacing 16, width fill ]
+            [ UI.labelScaled -2 ("Task " ++ String.fromInt (idx + 1))
+            , paragraph [] [ UI.label [] task.text ]
+            , UI.labelScaled -1 label
             , UI.separator [ width fill ]
             , UI.label [] "Correct"
             , column [ paddingEach { edges | left = 8 }, spacing 10 ]
-                [ UI.label [] ("Direct " ++ (String.fromInt stats.correctDirect))
-                , UI.label [] ("Indirect " ++ (String.fromInt stats.correctIndirect))
+                [ UI.label [] ("Direct " ++ String.fromInt stats.correctDirect)
+                , UI.label [] ("Indirect " ++ String.fromInt stats.correctIndirect)
                 ]
             , UI.label [] "Incorrect"
             , column [ paddingEach { edges | left = 8 }, spacing 10 ]
-                [ UI.label [] ("Direct " ++ (String.fromInt stats.incorrectDirect))
-                , UI.label [] ("Indirect " ++ (String.fromInt stats.incorrectIndirect))
+                [ UI.label [] ("Direct " ++ String.fromInt stats.incorrectDirect)
+                , UI.label [] ("Indirect " ++ String.fromInt stats.incorrectIndirect)
                 ]
             ]
         )
 
+
 viewPerTaskStats : Shared.Model -> LoadedModel -> Element Msg
-viewPerTaskStats shared model =
+viewPerTaskStats _ model =
     column [ centerX, padding 16, width (fill |> maximum 800), spacing 16 ]
-        (
-            (zip model.statistics.study.tasks model.statistics.taskStatistics)
+        (zip model.statistics.study.tasks model.statistics.taskStatistics
             |> List.indexedMap (viewTaskStats model.statistics.study.tree)
         )
+
 
 viewLoaded : Shared.Model -> LoadedModel -> View Msg
 viewLoaded shared model =
