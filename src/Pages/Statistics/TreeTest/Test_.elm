@@ -15,6 +15,7 @@ import Tree
 import TreeTest
 import UI exposing (edges)
 import View exposing (View)
+import Dict
 
 
 page : Shared.Model -> Request.With Params -> Page.With Model Msg
@@ -286,10 +287,25 @@ viewTaskStats tree idx ( task, stats ) =
             Tree.nodeByIDWithParents task.correctAnswer tree
                 |> Maybe.map (\( node, parents ) -> (parents ++ [ node ]) |> List.map gText |> String.join " / ")
                 |> Maybe.withDefault "Failed to find node"
+
+        sortedChosen =
+            List.sortBy Tuple.second stats.chosen
+            |> List.reverse
+
+        labelFor nodeID =
+            Tree.nodeByIDWithParents nodeID tree
+                |> Maybe.map (\( node, parents ) -> (parents ++ [ node ]) |> List.map gText |> String.join " / ")
+                |> Maybe.withDefault "Failed to find node"
+
+        chosenRow (node, amount) =
+            row [ spacing 10 ]
+                [ UI.label [] (labelFor node)
+                , UI.label [] (String.fromInt amount)
+                ]
     in
     UI.card [ width fill ]
         (column [ spacing 16, width fill ]
-            [ UI.labelScaled -2 ("Task " ++ String.fromInt (idx + 1))
+            ([ UI.labelScaled -2 ("Task " ++ String.fromInt (idx + 1))
             , paragraph [] [ UI.label [] task.text ]
             , UI.labelScaled -1 label
             , UI.separator [ width fill ]
@@ -303,7 +319,8 @@ viewTaskStats tree idx ( task, stats ) =
                 [ UI.label [] ("Direct " ++ String.fromInt stats.incorrectDirect)
                 , UI.label [] ("Indirect " ++ String.fromInt stats.incorrectIndirect)
                 ]
-            ]
+            , UI.separator [ width fill ]
+            ] ++ (List.map chosenRow sortedChosen))
         )
 
 

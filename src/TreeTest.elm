@@ -5,6 +5,7 @@ import Json.Decode as D
 import Json.Encode as E
 import Tree
 import Web
+import Dict exposing (Dict)
 
 
 type alias Study =
@@ -167,15 +168,23 @@ type alias TaskStatistics =
     , correctIndirect : Int
     , incorrectDirect : Int
     , incorrectIndirect : Int
+    , chosen : List (Tree.ID, Int)
     }
+
+stringToIdDecoderDict : D.Decoder (Dict String b) -> D.Decoder (List (Tree.ID, b))
+stringToIdDecoderDict dict =
+    dict
+    |> D.map Dict.toList
+    |> D.map (List.map (Tuple.mapFirst Tree.ID))
 
 taskStatisticsDecoder : D.Decoder TaskStatistics
 taskStatisticsDecoder =
-    D.map4 TaskStatistics
+    D.map5 TaskStatistics
         (D.field "correctDirect" D.int)
         (D.field "correctIndirect" D.int)
         (D.field "incorrectDirect" D.int)
         (D.field "incorrectIndirect" D.int)
+        (D.field "choices" (stringToIdDecoderDict (D.dict D.int)))
 
 treetestStatisticsDecoder : D.Decoder TreeTestStatistics
 treetestStatisticsDecoder =

@@ -134,6 +134,21 @@ extension Array where Element == ObservationPoint {
     func countIncorrectIndirect(tree: Node<Item>) -> Int {
         self.filterCount { !$0.correct && !$0.direct(tree: tree) }
     }
+    func countChosenAnswersPerNode() -> [String: Int] {
+        var result: [String: Int] = [:]
+
+        for item in self {
+            let id = item.question.answer
+
+            if let count = result[id] {
+                result[id] = count + 1
+            } else {
+                result[id] = 1
+            }
+        }
+
+        return result
+    }
 }
 
 extension Observation {
@@ -234,6 +249,7 @@ struct TaskStatistics: ReqEncodable {
     var correctIndirect: Int
     var incorrectDirect: Int
     var incorrectIndirect: Int
+    var choices: [String: Int]
 }
 
 struct TreeTestStatistics: ReqEncodable {
@@ -264,7 +280,8 @@ struct TreeTestStatistics: ReqEncodable {
                 correctDirect: obs.countCorrectDirect(tree: study.tree),
                 correctIndirect: obs.countCorrectIndirect(tree: study.tree),
                 incorrectDirect: obs.countIncorrectDirect(tree: study.tree),
-                incorrectIndirect: obs.countIncorrectIndirect(tree: study.tree)
+                incorrectIndirect: obs.countIncorrectIndirect(tree: study.tree),
+                choices: obs.countChosenAnswersPerNode()
             )
         }
 
