@@ -149,7 +149,7 @@ taskStatistics userCount num stats =
             el [ width (fillPortion (round (percent * 1000))), height (px 16), Background.color color ] none
     in
     column [ width fill, spacing 8 ]
-        [ UI.labelScaled -1 ("Task " ++ String.fromInt num)
+        [ UI.labelScaled -1 ("Task " ++ String.fromInt (num + 1))
         , row [ width fill, Border.color <| rgb255 0x00 0x00 0x00, Border.width 4 ]
             [ item (toFloat stats.incorrectDirect / toFloat userCount) colorIncorrectDirect
             , item (toFloat stats.incorrectIndirect / toFloat userCount) colorIncorrectIndirect
