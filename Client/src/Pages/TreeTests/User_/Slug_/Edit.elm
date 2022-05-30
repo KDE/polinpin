@@ -379,6 +379,16 @@ selectingViewNode num isRoot model (Network.TreeNode id data children) =
     let
         childNodes =
             List.map (selectingViewNode num False model) children
+        action =
+            if List.length children == 0 then
+                Just (DefineAnswerForTask num id)
+            else
+                Nothing
+        item =
+            if List.length children == 0 then
+                UI.tealTextButton
+            else
+                UI.textButton
     in
     column
         [ paddingEach
@@ -394,7 +404,7 @@ selectingViewNode num isRoot model (Network.TreeNode id data children) =
             }
         , spacing 8
         ]
-        (UI.textButton (Just (DefineAnswerForTask num id)) [] data.text
+        (item action [] data.text
             :: childNodes
         )
 

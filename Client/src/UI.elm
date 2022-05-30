@@ -1,4 +1,4 @@
-module UI exposing (Palette, blackLine, box, currentPasswordInput, darkTextButton, emailInput, grayBox, intScale, line, link, multilineInput, newPasswordInput, scale, searchInput, sizedLabel, smallTextButton, spellCheckedInput, textButton, textInput, transtext, usernameInput, withScrim)
+module UI exposing (Palette, blackLine, box, currentPasswordInput, darkTextButton, emailInput, grayBox, intScale, line, link, multilineInput, newPasswordInput, scale, searchInput, sizedLabel, smallTextButton, spellCheckedInput, textButton, textInput, transtext, usernameInput, withScrim, tealTextButton)
 
 import Element exposing (..)
 import Element.Background as Background
@@ -100,23 +100,30 @@ blackLine =
 
 
 darkGrayPalette =
-    (Palette (rgb255 205 199 183)
-            (rgb255 50 50 50)
-            (Just (rgb255 0xE0 0xDA 0xC9))
-            (Just (rgb255 50 50 50))
-            (Just (rgb255 0xAE 0xA8 0x99))
-            (Just (rgb255 50 50 50))
-        )
+    Palette (rgb255 205 199 183)
+        (rgb255 50 50 50)
+        (Just (rgb255 0xE0 0xDA 0xC9))
+        (Just (rgb255 50 50 50))
+        (Just (rgb255 0xAE 0xA8 0x99))
+        (Just (rgb255 50 50 50))
+
+
+tealPalette =
+    Palette (rgb255 0x44 0xF0 0xD3)
+        (rgb255 50 50 50)
+        (Just (rgb255 0x69 0xF3 0xDC))
+        Nothing
+        (Just (rgb255 0x00 0xB7 0x9D))
+        Nothing
+
 
 darkerGrayPalette =
-    (Palette (rgb255 0x8D 0x86 0x72)
+    Palette (rgb255 0x8D 0x86 0x72)
         (rgb255 50 50 50)
-        (Just (rgb255 0x95 0x8e 0x79))
+        (Just (rgb255 0x95 0x8E 0x79))
         (Just (rgb255 50 50 50))
         (Just (rgb255 0x56 0x50 0x3D))
         (Just (rgb255 50 50 50))
-    )
-
 
 
 whiteBox =
@@ -144,16 +151,21 @@ abstractButton palette msg attrs child =
                 (paletteToAttribute palette)
                 []
     in
-    Input.button (behindContent (html htmlEl) :: attrs) { onPress = msg, label = el [ centerX ] child}
+    Input.button (behindContent (html htmlEl) :: attrs) { onPress = msg, label = el [ centerX ] child }
+
 
 textButton : Maybe msg -> List (Attribute msg) -> String -> Element msg
 textButton msg attrs txt =
-    abstractButton darkGrayPalette msg ( padding 10 :: attrs) (text txt)
+    abstractButton darkGrayPalette msg (padding 10 :: attrs) (text txt)
+
 
 darkTextButton : Maybe msg -> List (Attribute msg) -> String -> Element msg
 darkTextButton msg attrs txt =
-    abstractButton darkerGrayPalette msg ( padding 10 :: attrs) (text txt)
+    abstractButton darkerGrayPalette msg (padding 10 :: attrs) (text txt)
 
+tealTextButton : Maybe msg -> List (Attribute msg) -> String -> Element msg
+tealTextButton msg attrs txt =
+    abstractButton tealPalette msg (padding 10 :: attrs) (text txt)
 
 smallTextButton : Maybe msg -> List (Attribute msg) -> String -> Element msg
 smallTextButton msg attrs =
