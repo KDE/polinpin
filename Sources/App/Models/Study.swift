@@ -10,6 +10,7 @@ struct StudyData: Codable {
     var slug: String
     var published: Bool
     var password: String?
+    var kind: StudyKind
 }
 
 final class Study: Model {
@@ -42,6 +43,6 @@ final class Study: Model {
     init() { }
 
     func toData() -> StudyData {
-        StudyData(title: self.title, slug: self.slug, published: self.published, password: self.password)
+        StudyData(title: self.title, slug: self.slug, published: self.published, password: self.password, kind: self.kind)
     }
 }

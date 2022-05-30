@@ -34,6 +34,7 @@ final class TreeTestController: RouteCollection {
         let tests = routes.grouped("tree-tests")
 
         // CRUD
+        tests.get("my", use: my)
         tests.post(":user", use: create)
         tests.get(":user", ":slug", use: getByID)
         tests.patch(":user", ":slug", use: updateByID)
@@ -48,7 +49,19 @@ final class TreeTestController: RouteCollection {
         // submit an observation (must be published)
         tests.post(":user", ":slug", "completed", use: submitObservation)
     }
+    struct MyResponse: Content {
+        var studies: [StudyData]
+    }
+    func my(req: Request) async throws -> MyResponse {
+        let user: User = try req.auth.require()
 
+        let study = try await Study.query(on: req.db)
+            .filter(\.$kind == .treeTest)
+            .filter(\.$user.$id == user.id!)
+            .all()
+
+        return MyResponse(studies: study.map { $0.toData() })
+    }
     struct TreeTestStudyData: Content {
         var studyData: StudyData
         var tree: TreeNode<TreeStudyItem>
@@ -103,6 +116,8 @@ final class TreeTestController: RouteCollection {
 
         study.treeTestStudy!.tree = request.tree
         study.treeTestStudy!.tasks = request.tasks
+
+        try await study.treeTestStudy!.save(on: req.db)
 
         return .ok
     }

@@ -22,6 +22,7 @@ struct InitialMigration: AsyncMigration {
         try await database.schema("studies")
             .id()
             .field("user_id", .uuid, .required, .references("users", "id", onDelete: .cascade))
+            .field("title", .string, .required)
             .field("slug", .string, .required)
             .unique(on: "slug", "user_id")
             .field("kind", studyKind, .required)

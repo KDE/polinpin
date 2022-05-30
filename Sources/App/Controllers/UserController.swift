@@ -6,6 +6,7 @@ final class UserController: RouteCollection {
         let auth = routes.grouped("auth")
         auth.post("login", use: login)
         auth.post("register", use: register)
+        auth.get("me", use: me)
     }
 
     struct UserSession: Content {
@@ -22,11 +23,11 @@ final class UserController: RouteCollection {
         guard let user = try await User.query(on: req.db)
             .filter(\.$username == request.username)
             .first() else {
-                throw Abort(.notFound)
+                throw Abort(.notFound, reason: "User \(request.username) doesn't exist")
             }
 
         guard try await req.password.async.verify(request.password, created: user.password) else {
-            throw Abort(.unauthorized)
+            throw Abort(.unauthorized, reason: "Incorrect password")
         }
 
         let session = Session(belongingTo: user)
@@ -55,5 +56,13 @@ final class UserController: RouteCollection {
 
             return UserSession(token: session.id!.uuidString)
         }
+    }
+    struct UserInformation: Content {
+        var name: String
+        var username: String
+    }
+    func me(req: Request) async throws -> UserInformation {
+        let user: User = try req.auth.require()
+        return UserInformation(name: user.name, username: user.username)
     }
 }
