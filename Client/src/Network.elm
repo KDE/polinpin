@@ -1,4 +1,4 @@
-module Network exposing (..)
+module Network exposing (RequestStatus(..), StudyData, StudyKind(..), TreeNode(..), TreeStudyItem, TreeStudyResults, TreeStudyTask, TreeTestAnsweredQuestion, TreeTestObservation, TreeTestPastSelection, TreeTestStudyData, UserInformation, UserSession, login, me, myTreeTests, newTreeTest, publishTreeStudy, register, saveTreeStudy, treeStudyResults, treeStudySubmitObservation, treeTest, treeTestWithoutAuth)
 
 import Http
 import Json.Decode as D
@@ -169,6 +169,11 @@ type StudyKind
     = TreeTest
 
 
+maybeToList : Maybe a -> List a
+maybeToList =
+    Maybe.map List.singleton >> Maybe.withDefault []
+
+
 newTreeTest : UserSession -> String -> String -> (Result Http.Error String -> msg) -> Cmd msg
 newTreeTest session username title msg =
     postHeaders
@@ -187,6 +192,15 @@ treeTest : UserSession -> String -> String -> (Result Http.Error TreeTestStudyDa
 treeTest session username slug msg =
     getHeaders
         { headers = sessionHeaders session
+        , url = endpoint "tree-tests/" ++ username ++ "/" ++ slug
+        , expect = Http.expectJson msg treeTestStudyDataDecoder
+        }
+
+
+treeTestWithoutAuth : Maybe String -> String -> String -> (Result Http.Error TreeTestStudyData -> msg) -> Cmd msg
+treeTestWithoutAuth password username slug msg =
+    getHeaders
+        { headers = password |> Maybe.map (\p -> Http.header "StudyPassword" p) |> maybeToList
         , url = endpoint "tree-tests/" ++ username ++ "/" ++ slug
         , expect = Http.expectJson msg treeTestStudyDataDecoder
         }
@@ -289,4 +303,117 @@ saveTreeStudy session username slug tree tasks msg =
                     , ( "tasks", E.list encodeTreeStudyTask tasks )
                     ]
                 )
+        }
+
+
+publishTreeStudy : UserSession -> String -> String -> (Result Http.Error () -> msg) -> Cmd msg
+publishTreeStudy session username slug msg =
+    postHeaders
+        { headers = sessionHeaders session
+        , url = endpoint "tree-tests/" ++ username ++ "/" ++ slug ++ "/publish"
+        , expect = Http.expectWhatever msg
+        , body = Http.emptyBody
+        }
+
+
+type alias TreeStudyResults =
+    { observations : List TreeTestObservation
+    }
+
+
+treeStudyResultsDecoder : D.Decoder TreeStudyResults
+treeStudyResultsDecoder =
+    D.map TreeStudyResults
+        (D.field "observations" (D.list treeTestObservationDecoder))
+
+
+type alias TreeTestObservation =
+    { responses : List TreeTestAnsweredQuestion
+    }
+
+
+treeTestObservationDecoder : D.Decoder TreeTestObservation
+treeTestObservationDecoder =
+    D.map TreeTestObservation
+        (D.field "responses" (D.list treeTestAnsweredQuestionDecoder))
+
+
+encodeTreeTestObservation : TreeTestObservation -> E.Value
+encodeTreeTestObservation observation =
+    E.object
+        [ ( "responses", E.list encodeTreeTestAnsweredQuestion observation.responses )
+        ]
+
+
+type alias TreeTestAnsweredQuestion =
+    { taskID : String
+    , answer : String
+    , pastSelections : List TreeTestPastSelection
+    , startedAt : Int
+    , endedAt : Int
+    }
+
+
+encodeTreeTestAnsweredQuestion : TreeTestAnsweredQuestion -> E.Value
+encodeTreeTestAnsweredQuestion answered =
+    E.object
+        [ ( "taskID", E.string answered.taskID )
+        , ( "answer", E.string answered.answer )
+        , ( "pastSelections", E.list encodeTreeTestPastSelection answered.pastSelections )
+        , ( "startedAt", E.int answered.startedAt )
+        , ( "endedAt", E.int answered.endedAt )
+        ]
+
+
+treeTestAnsweredQuestionDecoder : D.Decoder TreeTestAnsweredQuestion
+treeTestAnsweredQuestionDecoder =
+    D.map5 TreeTestAnsweredQuestion
+        (D.field "taskID" D.string)
+        (D.field "answer" D.string)
+        (D.field "pastSelections" (D.list treeTestPastSelectionDecoder))
+        (D.field "startedAt" D.int)
+        (D.field "endedAt" D.int)
+
+
+type alias TreeTestPastSelection =
+    { selectedID : String
+    , selectedAt : Int
+    }
+
+
+treeTestPastSelectionDecoder : D.Decoder TreeTestPastSelection
+treeTestPastSelectionDecoder =
+    D.map2 TreeTestPastSelection
+        (D.field "selectedID" D.string)
+        (D.field "selectedAt" D.int)
+
+
+encodeTreeTestPastSelection : TreeTestPastSelection -> E.Value
+encodeTreeTestPastSelection selection =
+    E.object
+        [ ( "selectedID", E.string selection.selectedID )
+        , ( "selectedAt", E.int selection.selectedAt )
+        ]
+
+
+treeStudyResults : UserSession -> String -> String -> (Result Http.Error TreeStudyResults -> msg) -> Cmd msg
+treeStudyResults session username slug msg =
+    getHeaders
+        { headers = sessionHeaders session
+        , url = endpoint "tree-tests/" ++ username ++ "/" ++ slug ++ "/results"
+        , expect = Http.expectJson msg treeStudyResultsDecoder
+        }
+
+
+treeStudySubmitObservation : Maybe String -> String -> String -> TreeTestObservation -> (Result Http.Error () -> msg) -> Cmd msg
+treeStudySubmitObservation password username slug observations msg =
+    postHeaders
+        { headers = password |> Maybe.map (\p -> Http.header "StudyPassword" p) |> maybeToList
+        , url = endpoint "tree-tests/" ++ username ++ "/" ++ slug ++ "/completed"
+        , expect = Http.expectWhatever msg
+        , body =
+            Http.jsonBody <|
+                E.object
+                    [ ( "result", encodeTreeTestObservation observations )
+                    ]
         }

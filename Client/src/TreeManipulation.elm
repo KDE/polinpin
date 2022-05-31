@@ -82,3 +82,9 @@ nodeByIDWithParents targetID ((TreeNode id _ children) as node) =
 
     else
         List.foldl (stepper [ node ]) Nothing children
+
+
+nodeByID : String -> TreeNode a -> Maybe (TreeNode a)
+nodeByID targetID node =
+    nodeByIDWithParents targetID node
+        |> Maybe.map (\( it, _ ) -> it)

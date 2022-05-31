@@ -2,7 +2,7 @@ import Fluent
 import Vapor
 
 struct TreeTestPastSelection: Codable {
-    var taskID: String
+    var selectedID: String
     var selectedAt: Int
 }
 
@@ -13,6 +13,10 @@ struct TreeTestAnsweredQuestion: Codable {
 
     var startedAt: Int
     var endedAt: Int
+}
+
+struct TreeTestObservationData: Codable {
+    var responses: [TreeTestAnsweredQuestion]
 }
 
 final class TreeTestStudyObservation: Model {

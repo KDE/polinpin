@@ -41,7 +41,7 @@ final class TreeTestController: RouteCollection {
         tests.delete(":user", ":slug", use: deleteByID)
 
         // get study results
-        tests.post(":user", ":slug", "results", use: results)
+        tests.get(":user", ":slug", "results", use: results)
 
         // publish a study
         tests.post(":user", ":slug", "publish", use: publish)
@@ -134,7 +134,7 @@ final class TreeTestController: RouteCollection {
         return .ok
     }
     struct ResultsResponse: Content {
-        var responses: [[TreeTestAnsweredQuestion]]
+        var observations: [TreeTestObservationData]
     }
     func results(req: Request) async throws -> ResultsResponse {
         let user: User = try req.auth.require()
@@ -144,7 +144,10 @@ final class TreeTestController: RouteCollection {
         }
 
         try await study.treeTestStudy!.$observations.load(on: req.db)
-        return ResultsResponse(responses: study.treeTestStudy!.observations.map { $0.response })
+        return ResultsResponse(
+            observations: study.treeTestStudy!.observations.map
+                { TreeTestObservationData(responses: $0.response) }
+        )
     }
     struct NewStudyRequest: Content {
         var title: String
@@ -175,7 +178,7 @@ final class TreeTestController: RouteCollection {
         }
     }
     struct SubmitRequest: Content {
-        var answers: [TreeTestAnsweredQuestion]
+        var result: TreeTestObservationData
     }
     func submitObservation(req: Request) async throws -> HTTPStatus {
         let study = try await req.getStudy()
@@ -188,10 +191,10 @@ final class TreeTestController: RouteCollection {
         guard study.password == req.headers["StudyPassword"][safe: 0] else {
             throw Abort(.unauthorized)
         }
-        guard treeTest.tasks.count == request.answers.count else {
+        guard treeTest.tasks.count == request.result.responses.count else {
             throw Abort(.badRequest)
         }
-        for (index, element) in request.answers.enumerated() {
+        for (index, element) in request.result.responses.enumerated() {
             guard treeTest.tasks[index].id == element.taskID else {
                 throw Abort(.badRequest)
             }
@@ -201,7 +204,7 @@ final class TreeTestController: RouteCollection {
         }
 
         let observation = TreeTestStudyObservation()
-        observation.response = request.answers
+        observation.response = request.result.responses
         try await treeTest.$observations.create(observation, on: req.db)
 
         return .ok

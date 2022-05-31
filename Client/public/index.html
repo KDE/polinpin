@@ -114,6 +114,29 @@ svg:active g path[stroke-width="1"] {
           this.el.appendChild(node)
         }
       }
+      class RougherRectangle extends Rough {
+        redraw() {
+          const w = this.clientWidth
+          const h = this.clientHeight
+
+          let node = this.rc.rectangle(0, 0, w, h, {
+            stroke: this.strokeColor,
+            fill: this.fillColor,
+            fillWeight: 3,
+            fillStyle: "zigzag",
+            hachureAngle: 0.0,
+            roughness: 1.0
+          })
+          this.el.setAttribute("viewBox", `0 0 ${w} ${h}`)
+          this.el.setAttribute("width", `${w}`)
+          this.el.setAttribute("height", `${h}`)
+          this.el.style.width = `${w}px`
+          this.el.style.height = `${h}px`
+          if (this.el.firstChild)
+            this.el.removeChild(this.el.firstChild)
+          this.el.appendChild(node)
+        }
+      }
       class RoughHorizontalLine extends Rough {
         redraw() {
           const w = this.clientWidth
@@ -134,6 +157,7 @@ svg:active g path[stroke-width="1"] {
         }
       }
       window.customElements.define('rough-rectangle', RoughRectangle);
+      window.customElements.define('rougher-rectangle', RougherRectangle);
       window.customElements.define('rough-horizontal-line', RoughHorizontalLine);
     </script>
   </head>
