@@ -88,3 +88,45 @@ nodeByID : String -> TreeNode a -> Maybe (TreeNode a)
 nodeByID targetID node =
     nodeByIDWithParents targetID node
         |> Maybe.map (\( it, _ ) -> it)
+
+
+appendBeforeNode : TreeNode a -> String -> TreeNode a -> TreeNode a
+appendBeforeNode newNode appendBefore appendUnder =
+    let
+        before =
+            \((TreeNode fID _ _) as fnode) ->
+                if fID == appendBefore then
+                    [ newNode, fnode ]
+
+                else
+                    [ fnode ]
+
+        f =
+            \(TreeNode fID fData fChildren) ->
+                TreeNode fID fData (List.concatMap before fChildren)
+
+        (TreeNode nID nData nChildren) =
+            f appendUnder
+    in
+    TreeNode nID nData (List.map (appendBeforeNode newNode appendBefore) nChildren)
+
+
+appendAfterNode : TreeNode a -> String -> TreeNode a -> TreeNode a
+appendAfterNode newNode appendAfter appendUnder =
+    let
+        after =
+            \((TreeNode fID _ _) as fnode) ->
+                if fID == appendAfter then
+                    [ fnode, newNode ]
+
+                else
+                    [ fnode ]
+
+        f =
+            \(TreeNode fID fData fChildren) ->
+                TreeNode fID fData (List.concatMap after fChildren)
+
+        (TreeNode nID nData nChildren) =
+            f appendUnder
+    in
+    TreeNode nID nData (List.map (appendAfterNode newNode appendAfter) nChildren)

@@ -4,6 +4,7 @@ import Array exposing (Array)
 import Auth
 import Browser.Navigation
 import Dict
+import Drag
 import Effect exposing (Effect)
 import Element exposing (..)
 import Element.Background as Background
@@ -11,6 +12,8 @@ import Element.Font as Font
 import Element.Input as Input
 import Gen.Params.TreeTests.User_.Slug_.Edit exposing (Params)
 import Http
+import Json.Decode as D
+import Json.Encode as E
 import List.Extra
 import Network
 import Page
@@ -105,8 +108,13 @@ update user params msg model =
 
 
 subscriptions : Model -> Sub Msg
-subscriptions _ =
-    Sub.none
+subscriptions model =
+    case model of
+        Loaded inner ->
+            loadedSubscriptions inner |> Sub.map Inner
+
+        _ ->
+            Sub.none
 
 
 
@@ -167,12 +175,23 @@ type alias LoadedModel =
     , tasks : List Network.TreeStudyTask
     , tab : ActiveTab
     , definingFor : Maybe Int
+    , dragging : Maybe (Network.TreeNode Network.TreeStudyItem)
+    , dragTarget : Maybe CandidatePosition
     }
 
 
 initialLoaded : Network.TreeTestStudyData -> LoadedModel
 initialLoaded data =
-    LoadedModel data.studyData data.tree data.tasks Tree Nothing
+    LoadedModel data.studyData data.tree data.tasks Tree Nothing Nothing Nothing
+
+
+
+-- SUBSCRIPTIONS LOADED
+
+
+loadedSubscriptions : LoadedModel -> Sub LoadedMsg
+loadedSubscriptions _ =
+    Drag.subDragEvents candidatePositionDecoder Drag
 
 
 
@@ -193,6 +212,7 @@ type LoadedMsg
     | SaveResult (Result Http.Error ())
     | Publish
     | PublishResult (Result Http.Error ())
+    | Drag (Drag.DragMsg (Network.TreeNode Network.TreeStudyItem) CandidatePosition)
 
 
 uniqueTaskID : Int -> List Network.TreeStudyTask -> String
@@ -283,6 +303,35 @@ updateLoaded user params msg model =
         PublishResult (Err _) ->
             ( model, Effect.none )
 
+        Drag (Drag.Start ( (Network.TreeNode id _ _) as node, _ )) ->
+            ( { model | dragging = Just node, tree = TreeManipulation.deleteByID id model.tree }, Effect.none )
+
+        Drag (Drag.Move coords beacons) ->
+            ( { model | dragTarget = Drag.closestBeacon coords beacons }, Effect.none )
+
+        Drag Drag.Stop ->
+            let
+                nieuw =
+                    { model | dragging = Nothing, dragTarget = Nothing }
+            in
+            case ( model.dragging, model.dragTarget ) of
+                ( Just node, Just target ) ->
+                    case target of
+                        Before id ->
+                            ( { nieuw | tree = TreeManipulation.appendBeforeNode node id nieuw.tree }, Effect.none )
+
+                        After id ->
+                            ( { nieuw | tree = TreeManipulation.appendAfterNode node id nieuw.tree }, Effect.none )
+
+                        AppendedIn id ->
+                            ( { nieuw | tree = TreeManipulation.appendInNode id node nieuw.tree }, Effect.none )
+
+                _ ->
+                    ( nieuw, Effect.none )
+
+        Drag (Drag.Invalid _) ->
+            ( model, Effect.none )
+
 
 
 -- VIEW LOADED
@@ -325,11 +374,97 @@ loadedView shared model =
 
 
 
+-- BEACON
+
+
+type CandidatePosition
+    = Before String
+    | After String
+    | AppendedIn String
+
+
+candidatePositionDecoder : D.Decoder CandidatePosition
+candidatePositionDecoder =
+    D.map2
+        Tuple.pair
+        (D.field "position" D.string)
+        (D.field "text" D.string)
+        |> D.andThen jsonValueToPosition
+
+
+jsonValueToPosition : ( String, String ) -> D.Decoder CandidatePosition
+jsonValueToPosition ( position, text ) =
+    case position of
+        "before" ->
+            D.succeed (Before text)
+
+        "after" ->
+            D.succeed (After text)
+
+        "appended-in" ->
+            D.succeed (AppendedIn text)
+
+        _ ->
+            D.fail ("Unknown position: " ++ position)
+
+
+encodeCandidatePosition : CandidatePosition -> E.Value
+encodeCandidatePosition position =
+    let
+        ( positionStr, textStr ) =
+            case position of
+                Before text ->
+                    ( "before", text )
+
+                After text ->
+                    ( "after", text )
+
+                AppendedIn text ->
+                    ( "appended-in", text )
+    in
+    E.object
+        [ ( "position", E.string positionStr )
+        , ( "text", E.string textStr )
+        ]
+
+
+beacon : CandidatePosition -> List (Attribute msg) -> Element msg
+beacon position =
+    Drag.beacon (encodeCandidatePosition position)
+
+
+
 -- NODE VIEW
 
 
+viewPlacingInner : String -> Element LoadedMsg
+viewPlacingInner label =
+    column [ paddingEach { left = 30, top = 0, bottom = 0, right = 0 } ]
+        [ UI.grayBox [] (text label)
+        ]
+
+
+viewPlacing : Maybe (Network.TreeNode Network.TreeStudyItem) -> Element LoadedMsg
+viewPlacing node =
+    case node of
+        Just (Network.TreeNode _ content _) ->
+            viewPlacingInner content.text
+
+        Nothing ->
+            none
+
+
+whenTrue : Bool -> Element msg -> Element msg
+whenTrue cond node =
+    if cond then
+        node
+
+    else
+        none
+
+
 viewNode : Bool -> LoadedModel -> Network.TreeNode Network.TreeStudyItem -> Element LoadedMsg
-viewNode isRoot model (Network.TreeNode id data children) =
+viewNode isRoot model ((Network.TreeNode id data children) as node) =
     let
         childNodes =
             List.map (viewNode False model) children
@@ -346,32 +481,61 @@ viewNode isRoot model (Network.TreeNode id data children) =
 
             else
                 [ addChild, delete ]
+
+        whenNotRoot el =
+            if isRoot then
+                none
+
+            else
+                el
     in
     column
-        [ paddingEach
-            { left =
-                if isRoot then
-                    0
-
-                else
-                    30
-            , top = 0
-            , right = 0
-            , bottom = 0
-            }
-        , spacing 8
+        [ spacing 8
+        , Element.below <| whenNotRoot (beacon (After id) [ width (px 1) ])
         ]
-        (row [ spacing 10 ]
-            (UI.textInput []
-                { onChange = \str -> EditItem id str
-                , text = data.text
-                , placeholder = Just (Input.placeholder [] (text "label"))
-                , label = Input.labelHidden "node name"
+        [ whenTrue (model.dragTarget == Just (Before id)) (viewPlacing model.dragging)
+        , column
+            [ paddingEach
+                { left =
+                    if isRoot then
+                        0
+
+                    else
+                        30
+                , top = 0
+                , right = 0
+                , bottom = 0
                 }
-                :: editActions
+            , spacing 8
+            ]
+            (row
+                [ spacing 10
+                , Element.above <| whenNotRoot (beacon (Before id) [ width (px 1) ])
+                ]
+                ([ if not isRoot then
+                    UI.grayBox
+                        [ Drag.onDragStart Drag node
+                        , height fill
+                        , width (px 16)
+                        ]
+                        none
+
+                   else
+                    none
+                 , UI.textInput [ Element.below <| beacon (AppendedIn id) [ width (px 1) ] ]
+                    { onChange = \str -> EditItem id str
+                    , text = data.text
+                    , placeholder = Just (Input.placeholder [] (text "label"))
+                    , label = Input.labelHidden "node name"
+                    }
+                 ]
+                    ++ editActions
+                )
+                :: whenTrue (model.dragTarget == Just (AppendedIn id)) (viewPlacing model.dragging)
+                :: childNodes
             )
-            :: childNodes
-        )
+        , whenTrue (model.dragTarget == Just (After id)) (viewPlacing model.dragging)
+        ]
 
 
 mapOne : (a -> a) -> Int -> List a -> List a
@@ -597,7 +761,7 @@ resultsTask model num ( task, answers ) =
              ]
                 ++ List.map
                     (\( node, chosenCount ) ->
-                        el [UI.fontSize -1] (text <| pathLabel node ++ ": " ++ String.fromInt chosenCount)
+                        el [ UI.fontSize -1 ] (text <| pathLabel node ++ ": " ++ String.fromInt chosenCount)
                     )
                     selectedAnswers
             )

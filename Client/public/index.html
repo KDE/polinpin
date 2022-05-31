@@ -1,178 +1,266 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <script src="https://unpkg.com/roughjs@latest/bundled/rough.js"></script>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Fuzzy+Bubbles:wght@400;700&display=swap" rel="stylesheet"> 
-    <style>
-      :root {
-        background-color: #f9f5ea;
-      }
-    </style>
-    <script>
-      class Rough extends HTMLElement {
-        static get observedAttributes() {
-          return ['color', 'stroke-color', 'hover-color', 'hover-stroke-color', 'down-color', 'down-stroke-color']
-        }
-        constructor() {          
-          super()
 
-          this.down = false
-          this.hover = false
-          this.shadow = this.attachShadow({mode: 'open'})
-          this.styling = document.createElement('style')
-          this.doStylesheet()
-          this.shadow.appendChild(this.styling)
-        }
-        attributeChangedCallback(name, oldValue, newValue) {
-          this.doStylesheet()
-        }
-        doStylesheet() {
-          this.styling.textContent = `
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script src="https://unpkg.com/roughjs@latest/bundled/rough.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fuzzy+Bubbles:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      background-color: #f9f5ea
+    }
+    /* [data-beacon] {
+      border: 1px solid red !important;
+    } */
+  </style>
+  <script>
+    class Rough extends HTMLElement {
+      static get observedAttributes() {
+        return ['color', 'stroke-color', 'hover-color', 'hover-stroke-color', 'down-color', 'down-stroke-color']
+      }
+      constructor() {
+        super()
+
+        this.down = false
+        this.hover = false
+        this.shadow = this.attachShadow({ mode: 'open' })
+        this.styling = document.createElement('style')
+        this.doStylesheet()
+        this.shadow.appendChild(this.styling)
+      }
+      attributeChangedCallback(name, oldValue, newValue) {
+        this.doStylesheet()
+      }
+      doStylesheet() {
+        this.styling.textContent = `
 svg g path[stroke-width="4"] {
-  stroke: ${this.getAttribute("color")};
+  stroke: ${this.getAttribute("color")}
 }
 
 svg g path[stroke-width="1"] {
-  stroke: ${this.getAttribute("stroke-color")};
+  stroke: ${this.getAttribute("stroke-color")}
 }
 
 svg:hover g path[stroke-width="4"] {
-  stroke: ${this.getAttribute("hover-color")};
+  stroke: ${this.getAttribute("hover-color")}
 }
 
 svg:hover g path[stroke-width="1"] {
-  stroke: ${this.getAttribute("hover-stroke-color")};
+  stroke: ${this.getAttribute("hover-stroke-color")}
 }
 
 svg:active g path[stroke-width="4"] {
-  stroke: ${this.getAttribute("down-color")};
+  stroke: ${this.getAttribute("down-color")}
 }
 
 svg:active g path[stroke-width="1"] {
-  stroke: ${this.getAttribute("down-stroke-color")};
+  stroke: ${this.getAttribute("down-stroke-color")}
 }
 `
-        }
-        connectedCallback() {
-          let shadowRoot = this.shadow
-
-          this.style.display = 'block'
-          this.style.width = '100%'
-          this.style.height = '100%'
-          this.el = document.createElementNS('http://www.w3.org/2000/svg', 'svg')
-
-          this.el.style.display = 'block'
-          this.el.style.overflow = 'visible'
-          this.rc = rough.svg(this.el)
-
-          shadowRoot.appendChild(this.el)
-          this.redraw()
-          const d = new Date()
-          const thingy = 250
-          const evened = d.getMilliseconds() % thingy
-          setTimeout(() => {
-            this.timer = setInterval(() => this.redraw(), thingy)
-          }, evened)
-  
-          new ResizeObserver(() => this.redraw()).observe(this)
-        }
-        disconnectedCallback() {
-          clearInterval(this.timer)
-        }
-        get fillColor() {
-          return this.getAttribute("color")
-        }
-        get strokeColor() {
-          return this.getAttribute("stroke-color")
-        }
-        redraw() {
-
-        }        
       }
-      class RoughRectangle extends Rough {
-        redraw() {
-          const w = this.clientWidth
-          const h = this.clientHeight
+      connectedCallback() {
+        let shadowRoot = this.shadow
 
-          let node = this.rc.rectangle(0, 0, w, h, {
-            stroke: this.strokeColor,
-            fill: this.fillColor,
-            fillWeight: 4,
-            roughness: 2.0
-          })
-          this.el.setAttribute("viewBox", `0 0 ${w} ${h}`)
-          this.el.setAttribute("width", `${w}`)
-          this.el.setAttribute("height", `${h}`)
-          this.el.style.width = `${w}px`
-          this.el.style.height = `${h}px`
-          if (this.el.firstChild)
-            this.el.removeChild(this.el.firstChild)
-          this.el.appendChild(node)
+        this.style.display = 'block'
+        this.style.width = '100%'
+        this.style.height = '100%'
+        this.el = document.createElementNS('http://www.w3.org/2000/svg', 'svg')
+
+        this.el.style.display = 'block'
+        this.el.style.overflow = 'visible'
+        this.rc = rough.svg(this.el)
+
+        shadowRoot.appendChild(this.el)
+        this.redraw()
+        const d = new Date()
+        const thingy = 250
+        const evened = d.getMilliseconds() % thingy
+        setTimeout(() => {
+          this.timer = setInterval(() => this.redraw(), thingy)
+        }, evened)
+
+        new ResizeObserver(() => this.redraw()).observe(this)
+      }
+      disconnectedCallback() {
+        clearInterval(this.timer)
+      }
+      get fillColor() {
+        return this.getAttribute("color")
+      }
+      get strokeColor() {
+        return this.getAttribute("stroke-color")
+      }
+      redraw() {
+
+      }
+    }
+    class RoughRectangle extends Rough {
+      redraw() {
+        const w = this.clientWidth
+        const h = this.clientHeight
+
+        let node = this.rc.rectangle(0, 0, w, h, {
+          stroke: this.strokeColor,
+          fill: this.fillColor,
+          fillWeight: 4,
+          roughness: 2.0
+        })
+        this.el.setAttribute("viewBox", `0 0 ${w} ${h}`)
+        this.el.setAttribute("width", `${w}`)
+        this.el.setAttribute("height", `${h}`)
+        this.el.style.width = `${w}px`
+        this.el.style.height = `${h}px`
+        if (this.el.firstChild)
+          this.el.removeChild(this.el.firstChild)
+        this.el.appendChild(node)
+      }
+    }
+    class RougherRectangle extends Rough {
+      redraw() {
+        const w = this.clientWidth
+        const h = this.clientHeight
+
+        let node = this.rc.rectangle(0, 0, w, h, {
+          stroke: this.strokeColor,
+          fill: this.fillColor,
+          fillWeight: 3,
+          fillStyle: "zigzag",
+          hachureAngle: 0.0,
+          roughness: 1.0
+        })
+        this.el.setAttribute("viewBox", `0 0 ${w} ${h}`)
+        this.el.setAttribute("width", `${w}`)
+        this.el.setAttribute("height", `${h}`)
+        this.el.style.width = `${w}px`
+        this.el.style.height = `${h}px`
+        if (this.el.firstChild)
+          this.el.removeChild(this.el.firstChild)
+        this.el.appendChild(node)
+      }
+    }
+    class RoughHorizontalLine extends Rough {
+      redraw() {
+        const w = this.clientWidth
+        const h = this.clientHeight
+
+        let node = this.rc.line(0, 0, w, 0, {
+          stroke: this.strokeColor,
+          roughness: 2.0
+        })
+        this.el.setAttribute("viewBox", `0 0 ${w} ${h}`)
+        this.el.setAttribute("width", `${w}`)
+        this.el.setAttribute("height", `${h}`)
+        this.el.style.width = `${w}px`
+        this.el.style.height = `${h}px`
+        if (this.el.firstChild)
+          this.el.removeChild(this.el.firstChild)
+        this.el.appendChild(node)
+      }
+    }
+    window.customElements.define('rough-rectangle', RoughRectangle)
+    window.customElements.define('rougher-rectangle', RougherRectangle)
+    window.customElements.define('rough-horizontal-line', RoughHorizontalLine)
+  </script>
+</head>
+
+<body>
+  <script src="/dist/elm.js"></script>
+  <script>
+    const storedData = localStorage.getItem("polinpin-user")
+    const flags = storedData ? JSON.parse(storedData) : storedData
+
+    const app = Elm.Main.init({
+      flags: flags
+    })
+    setupDraggable(app.ports.dragEvents.send)
+
+    function setupDraggable(sendEvent) {
+      const BEACON_ATTRIBUTE = "data-beacon"
+      const MINIMUM_DRAG_DISTANCE_PX = 10
+
+      document.addEventListener("pointerdown", awaitDragStart)
+
+      function awaitDragStart(startEvent) {
+        document.addEventListener("pointermove", maybeDragMove)
+        document.addEventListener("pointerup", stopAwaitingDrag)
+
+        function stopAwaitingDrag() {
+          document.removeEventListener("pointermove", maybeDragMove)
+          document.removeEventListener("pointerup", stopAwaitingDrag)
+        }
+
+        function maybeDragMove(moveEvent) {
+          const dragDistance = distance(coords(startEvent), coords(moveEvent))
+          if (dragDistance >= MINIMUM_DRAG_DISTANCE_PX) {
+            dragEvent("start", startEvent)
+            dragEvent("move", moveEvent)
+            stopAwaitingDrag()
+            document.addEventListener("pointermove", dragMove)
+            document.addEventListener("pointerup", dragEnd)
+          }
         }
       }
-      class RougherRectangle extends Rough {
-        redraw() {
-          const w = this.clientWidth
-          const h = this.clientHeight
 
-          let node = this.rc.rectangle(0, 0, w, h, {
-            stroke: this.strokeColor,
-            fill: this.fillColor,
-            fillWeight: 3,
-            fillStyle: "zigzag",
-            hachureAngle: 0.0,
-            roughness: 1.0
-          })
-          this.el.setAttribute("viewBox", `0 0 ${w} ${h}`)
-          this.el.setAttribute("width", `${w}`)
-          this.el.setAttribute("height", `${h}`)
-          this.el.style.width = `${w}px`
-          this.el.style.height = `${h}px`
-          if (this.el.firstChild)
-            this.el.removeChild(this.el.firstChild)
-          this.el.appendChild(node)
+      function dragEnd(event) {
+        dragEvent("stop", event)
+        document.removeEventListener("pointermove", dragMove)
+        document.removeEventListener("pointerup", dragEnd)
+      }
+
+      function dragMove(event) {
+        dragEvent("move", event)
+      }
+
+      function dragEvent(type, event) {
+        sendEvent({
+          type: type,
+          cursor: coords(event),
+          beacons: beaconPositions()
+        })
+      }
+
+      function beaconPositions() {
+        const beaconElements = document.querySelectorAll(`[${BEACON_ATTRIBUTE}]`)
+        return Array.from(beaconElements).map(beaconData)
+      }
+
+      function beaconData(elem) {
+        const boundingRect = elem.getBoundingClientRect()
+        const beaconId = elem.getAttribute(BEACON_ATTRIBUTE)
+        return {
+          data: tryParse(beaconId),
+          x: boundingRect.x,
+          y: boundingRect.y,
+          width: boundingRect.width,
+          height: boundingRect.height
         }
       }
-      class RoughHorizontalLine extends Rough {
-        redraw() {
-          const w = this.clientWidth
-          const h = this.clientHeight
 
-          let node = this.rc.line(0, 0, w, 0, {
-            stroke: this.strokeColor,
-            roughness: 2.0
-          })
-          this.el.setAttribute("viewBox", `0 0 ${w} ${h}`)
-          this.el.setAttribute("width", `${w}`)
-          this.el.setAttribute("height", `${h}`)
-          this.el.style.width = `${w}px`
-          this.el.style.height = `${h}px`
-          if (this.el.firstChild)
-            this.el.removeChild(this.el.firstChild)
-          this.el.appendChild(node)
+      function tryParse(str) {
+        try {
+          return JSON.parse(str)
+        } catch (e) {
+          return str
         }
       }
-      window.customElements.define('rough-rectangle', RoughRectangle);
-      window.customElements.define('rougher-rectangle', RougherRectangle);
-      window.customElements.define('rough-horizontal-line', RoughHorizontalLine);
-    </script>
-  </head>
-  <body>
-    <script src="/dist/elm.js"></script>
-    <script>
-      const storedData = localStorage.getItem("polinpin-user")
-      const flags = storedData ? JSON.parse(storedData) : storedData
 
-      const app = Elm.Main.init({
-        flags: flags
-      })
-      app.ports.storeUser.subscribe(function(state) {
-        localStorage.setItem("polinpin-user", JSON.stringify(state))
-      })
-    </script>
-  </body>
+      function coords(event) {
+        return { x: event.clientX, y: event.clientY }
+      }
+
+      function distance(pos1, pos2) {
+        const dx = pos1.x - pos2.x
+        const dy = pos1.y - pos2.y
+        return Math.sqrt(Math.pow(dx, 2) + Math.pow(dy, 2))
+      }
+    }
+    app.ports.storeUser.subscribe(function (state) {
+      localStorage.setItem("polinpin-user", JSON.stringify(state))
+    })
+  </script>
+</body>
+
 </html>
