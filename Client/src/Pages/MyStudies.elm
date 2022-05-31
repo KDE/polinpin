@@ -142,7 +142,7 @@ update user req msg model =
 
 
 subscriptions : Model -> Sub Msg
-subscriptions model =
+subscriptions _ =
     Sub.none
 
 
@@ -156,7 +156,7 @@ loadingView =
 
 
 errorView : Http.Error -> List (Element Msg)
-errorView why =
+errorView _ =
     [ el [ centerX ] (text "Error loading studies") ]
 
 

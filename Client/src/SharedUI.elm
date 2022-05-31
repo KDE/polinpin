@@ -1,7 +1,7 @@
 module SharedUI exposing (..)
 
 import Element exposing (..)
-import Gen.Route exposing (Route)
+import Gen.Route
 import Shared
 import UI
 import View exposing (View)
@@ -31,7 +31,7 @@ header shared =
             ]
         , shadedRow [ alignRight, spacing 20 ]
             (case shared.user of
-                Just user ->
+                Just _ ->
                     [ UI.link [] { url = Gen.Route.toHref Gen.Route.MyStudies, label = text "My Studies" }
                     ]
 

@@ -1,7 +1,6 @@
 module Pages.Home_ exposing (Model, Msg, page)
 
 import Element exposing (..)
-import Element.Input as Input
 import Gen.Params.Home_ exposing (Params)
 import Page
 import Request

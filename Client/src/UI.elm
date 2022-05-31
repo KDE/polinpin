@@ -2,7 +2,6 @@ module UI exposing (Palette, blackLine, box, currentPasswordInput, darkTextButto
 
 import Element exposing (..)
 import Element.Background as Background
-import Element.Events as Events
 import Element.Font as Font
 import Element.Input as Input
 import Html exposing (node)

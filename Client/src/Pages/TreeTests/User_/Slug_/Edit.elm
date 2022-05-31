@@ -3,7 +3,7 @@ module Pages.TreeTests.User_.Slug_.Edit exposing (Model, Msg, page)
 import Array exposing (Array)
 import Auth
 import Browser.Navigation
-import Dict exposing (Dict)
+import Dict
 import Effect exposing (Effect)
 import Element exposing (..)
 import Element.Background as Background
@@ -105,7 +105,7 @@ update user params msg model =
 
 
 subscriptions : Model -> Sub Msg
-subscriptions model =
+subscriptions _ =
     Sub.none
 
 
@@ -589,8 +589,8 @@ resultsTask model num ( task, answers ) =
                 ]
              , text "Failure"
              , column [ paddingEach { left = 20, top = 0, bottom = 0, right = 0 }, spacing 10 ]
-                [ text <| "Direct: " ++ (String.fromInt <| countDirectSuccess model.tree model.tasks answers)
-                , text <| "Indirect: " ++ (String.fromInt <| countDirectSuccess model.tree model.tasks answers)
+                [ text <| "Direct: " ++ (String.fromInt <| countDirectFailure model.tree model.tasks answers)
+                , text <| "Indirect: " ++ (String.fromInt <| countIndirectFailure model.tree model.tasks answers)
                 ]
              , UI.blackLine [ width fill ]
              , text "Chosen Answers"
@@ -861,8 +861,8 @@ taskStats model num answers =
         ]
 
 
-resultsOverview : Shared.Model -> ResultsModel -> Element ResultsMsg
-resultsOverview shared model =
+resultsOverview : ResultsModel -> Element ResultsMsg
+resultsOverview model =
     column
         [ width (fill |> maximum 800), spacing 30 ]
         [ row [ width fill, spacing 20 ]
@@ -941,7 +941,7 @@ resultsView shared model =
                         resultsTasks model model.tasks
 
                     Overview ->
-                        resultsOverview shared model
+                        resultsOverview model
                 ]
         , over = Nothing
         }

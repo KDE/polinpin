@@ -73,7 +73,7 @@ init _ flags =
                 Ok u ->
                     (Just u, Network.me (Network.UserSession u.token) (CheckLoginResult u.token))
 
-                Err nok ->
+                Err _ ->
                     (Nothing, Cmd.none)
     in
     ( Model user, msg )
