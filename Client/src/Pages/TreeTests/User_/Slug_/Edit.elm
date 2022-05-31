@@ -439,8 +439,9 @@ beacon position =
 
 viewPlacingInner : String -> Element LoadedMsg
 viewPlacingInner label =
-    column [ paddingEach { left = 30, top = 0, bottom = 0, right = 0 } ]
-        [ UI.grayBox [] (text label)
+    row [ paddingEach { left = 30, top = 0, bottom = 0, right = 0 }, spacing 10 ]
+        [ UI.grayBox [ height fill, width (px 16) ] none
+        , UI.grayBox [ padding 10 ] (text label)
         ]
 
 
