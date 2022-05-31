@@ -303,11 +303,18 @@ updateLoaded user params msg model =
         PublishResult (Err _) ->
             ( model, Effect.none )
 
-        Drag (Drag.Start ( (Network.TreeNode id _ _) as node, _ )) ->
-            ( { model | dragging = Just node, tree = TreeManipulation.deleteByID id model.tree }, Effect.none )
+        Drag (Drag.Start ( node, _ )) ->
+            ( { model | dragging = Just node }, Effect.none )
 
         Drag (Drag.Move coords beacons) ->
-            ( { model | dragTarget = Drag.closestBeacon coords beacons }, Effect.none )
+            let
+                tree = case model.dragging of
+                    Just (Network.TreeNode id _ _) ->
+                        TreeManipulation.deleteByID id model.tree
+                    Nothing ->
+                        model.tree
+            in
+            ( { model | dragTarget = Drag.closestBeacon coords beacons, tree = tree }, Effect.none )
 
         Drag Drag.Stop ->
             let
