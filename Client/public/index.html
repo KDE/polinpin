@@ -75,12 +75,12 @@ svg:active g path[stroke-width="1"] {
 
         shadowRoot.appendChild(this.el)
         this.redraw()
-        const d = new Date()
-        const thingy = 250
-        const evened = d.getMilliseconds() % thingy
-        setTimeout(() => {
-          this.timer = setInterval(() => this.redraw(), thingy)
-        }, evened)
+        // const d = new Date()
+        // const thingy = 250
+        // const evened = d.getMilliseconds() % thingy
+        // setTimeout(() => {
+        //   this.timer = setInterval(() => this.redraw(), thingy)
+        // }, evened)
 
         new ResizeObserver(() => this.redraw()).observe(this)
       }
