@@ -2,7 +2,7 @@ import Fluent
 import Vapor
 
 enum StudyKind: String, Codable {
-    case treeTest
+    case treeTest, desirabilityTest
 }
 
 struct StudyData: Codable {
@@ -39,6 +39,9 @@ final class Study: Model {
 
     @OptionalChild(for: \.$study)
     var treeTestStudy: TreeTestStudy?
+
+    @OptionalChild(for: \.$study)
+    var desirabilityStudy: DesirabilityStudy?
 
     init() { }
 

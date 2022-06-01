@@ -1,5 +1,7 @@
 Packages
 .build
+Uploads/*
+!Uploads/.gitkeep
 xcuserdata
 *.xcodeproj
 DerivedData/

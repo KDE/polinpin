@@ -1,4 +1,4 @@
-module UI exposing (Palette, blackLine, box, currentPasswordInput, darkTextButton, emailInput, grayBox, intScale, line, link, multilineInput, newPasswordInput, scale, searchInput, sizedLabel, smallTextButton, spellCheckedInput, textButton, textInput, transtext, usernameInput, withScrim, tealTextButton, smallTealTextButton, fontSize, solidBox, solidRoughBox)
+module UI exposing (Palette, blackLine, box, currentPasswordInput, darkTextButton, emailInput, fontSize, grayBox, intScale, line, link, multilineInput, newPasswordInput, par, scale, searchInput, sizedLabel, smallTealTextButton, smallTextButton, solidBox, solidRoughBox, spellCheckedInput, tealTextButton, textButton, textInput, transtext, usernameInput, withScrim)
 
 import Element exposing (..)
 import Element.Background as Background
@@ -80,25 +80,28 @@ box palette attrs child =
     in
     el (behindContent (html htmlEl) :: attrs) child
 
+
 solidBox : Color -> List (Attribute msg) -> Element msg -> Element msg
 solidBox color attrs child =
     let
         htmlEl =
             node "rough-rectangle"
-                [attribute "color" (color2string color)]
+                [ attribute "color" (color2string color) ]
                 []
     in
-    el ([behindContent (html htmlEl), Background.color color] ++ attrs) child
+    el ([ behindContent (html htmlEl), Background.color color ] ++ attrs) child
+
 
 solidRoughBox : Color -> List (Attribute msg) -> Element msg -> Element msg
 solidRoughBox color attrs child =
     let
         htmlEl =
             node "rougher-rectangle"
-                [attribute "color" (color2string color)]
+                [ attribute "color" (color2string color) ]
                 []
     in
     el (behindContent (html htmlEl) :: attrs) child
+
 
 line : Palette -> List (Attribute msg) -> Element msg
 line palette attrs =
@@ -179,7 +182,15 @@ abstractButton palette msg attrs child =
                 (paletteToAttribute palette)
                 []
     in
-    Input.button (behindContent (html htmlEl) :: attrs) { onPress = msg, label = el [ centerX ] child }
+    Input.button (behindContent (html htmlEl) :: attrs)
+        { onPress = msg
+        , label =
+            el
+                [ centerX
+                , htmlAttribute (style "pointer-events" "none")
+                ]
+                child
+        }
 
 
 textButton : Maybe msg -> List (Attribute msg) -> String -> Element msg
@@ -191,13 +202,16 @@ darkTextButton : Maybe msg -> List (Attribute msg) -> String -> Element msg
 darkTextButton msg attrs txt =
     abstractButton darkerGrayPalette msg (padding 10 :: attrs) (text txt)
 
+
 tealTextButton : Maybe msg -> List (Attribute msg) -> String -> Element msg
 tealTextButton msg attrs txt =
     abstractButton tealPalette msg (padding 10 :: attrs) (text txt)
 
+
 smallTextButton : Maybe msg -> List (Attribute msg) -> String -> Element msg
 smallTextButton msg attrs =
     textButton msg ([ padding 6, Font.size <| intScale -1 ] ++ attrs)
+
 
 smallTealTextButton : Maybe msg -> List (Attribute msg) -> String -> Element msg
 smallTealTextButton msg attrs =
@@ -337,10 +351,17 @@ intScale : Int -> Int
 intScale =
     scale >> round
 
+
 fontSize : Int -> Attr decorative msg
 fontSize =
-    intScale >> Font.size 
+    intScale >> Font.size
+
 
 sizedLabel : Int -> List (Attribute msg) -> String -> Element msg
 sizedLabel scaled attrs txt =
     el (Font.size (scale scaled |> round) :: attrs) (text txt)
+
+
+par : String -> Element msg
+par txt =
+    paragraph [] [ text txt ]

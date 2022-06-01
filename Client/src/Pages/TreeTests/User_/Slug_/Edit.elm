@@ -19,7 +19,7 @@ import Network
 import Page
 import Request
 import Shared
-import SharedUI
+import SharedUI exposing (tabButton)
 import TreeManipulation
 import UI
 import View exposing (View)
@@ -290,7 +290,7 @@ updateLoaded user params msg model =
         Publish ->
             ( model
             , Effect.fromCmd <|
-                Network.publishTreeStudy
+                Network.publishStudy
                     (Network.UserSession user.token)
                     params.user
                     params.slug
@@ -308,11 +308,13 @@ updateLoaded user params msg model =
 
         Drag (Drag.Move coords beacons) ->
             let
-                tree = case model.dragging of
-                    Just (Network.TreeNode id _ _) ->
-                        TreeManipulation.deleteByID id model.tree
-                    Nothing ->
-                        model.tree
+                tree =
+                    case model.dragging of
+                        Just (Network.TreeNode id _ _) ->
+                            TreeManipulation.deleteByID id model.tree
+
+                        Nothing ->
+                            model.tree
             in
             ( { model | dragTarget = Drag.closestBeacon coords beacons, tree = tree }, Effect.none )
 
@@ -342,19 +344,6 @@ updateLoaded user params msg model =
 
 
 -- VIEW LOADED
-
-
-tabButton : a -> a -> (a -> msg) -> String -> Element msg
-tabButton currentTab forTab msg text =
-    (if currentTab == forTab then
-        UI.darkTextButton
-
-     else
-        UI.textButton
-    )
-        (Just (msg forTab))
-        []
-        text
 
 
 loadedView : Shared.Model -> LoadedModel -> View LoadedMsg
@@ -856,7 +845,7 @@ median items =
         itemCount =
             Array.length items
     in
-    if modBy itemCount 2 /= 0 then
+    if modBy 2 itemCount /= 0 then
         Array.get (itemCount // 2) items
             |> Maybe.withDefault 0.0
 

@@ -19,6 +19,7 @@ fileprivate extension Request {
         guard let study = try await Study.query(on: self.db)
             .filter(\.$user.$id == uid)
             .filter(\.$slug == slug)
+            .filter(\.$kind == .treeTest)
             .with(\.$user)
             .with(\.$treeTestStudy)
             .first() else {
@@ -34,33 +35,15 @@ final class TreeTestController: RouteCollection {
         let tests = routes.grouped("tree-tests")
 
         // CRUD
-        tests.get("my", use: my)
         tests.post(":user", use: create)
         tests.get(":user", ":slug", use: getByID)
         tests.patch(":user", ":slug", use: updateByID)
-        tests.delete(":user", ":slug", use: deleteByID)
 
         // get study results
         tests.get(":user", ":slug", "results", use: results)
 
-        // publish a study
-        tests.post(":user", ":slug", "publish", use: publish)
-
         // submit an observation (must be published)
         tests.post(":user", ":slug", "completed", use: submitObservation)
-    }
-    struct MyResponse: Content {
-        var studies: [StudyData]
-    }
-    func my(req: Request) async throws -> MyResponse {
-        let user: User = try req.auth.require()
-
-        let study = try await Study.query(on: req.db)
-            .filter(\.$kind == .treeTest)
-            .filter(\.$user.$id == user.id!)
-            .all()
-
-        return MyResponse(studies: study.map { $0.toData() })
     }
     struct TreeTestStudyData: Content {
         var studyData: StudyData
@@ -86,15 +69,6 @@ final class TreeTestController: RouteCollection {
             tasks: study.treeTestStudy!.tasks
         )
     }
-    func deleteByID(req: Request) async throws -> HTTPStatus {
-        let user: User = try req.auth.require()
-        let study = try await req.getStudy()
-        guard user.id == study.user.id else {
-            throw Abort(.forbidden)
-        }
-        try await study.delete(on: req.db)
-        return .ok
-    }
     struct UpdateRequest: Content {
         var tree: TreeNode<TreeStudyItem>
         var tasks: [TreeStudyTask]
@@ -118,18 +92,6 @@ final class TreeTestController: RouteCollection {
         study.treeTestStudy!.tasks = request.tasks
 
         try await study.treeTestStudy!.save(on: req.db)
-
-        return .ok
-    }
-    func publish(req: Request) async throws -> HTTPStatus {
-        let user: User = try req.auth.require()
-        let study = try await req.getStudy()
-        guard user.id == study.user.id else {
-            throw Abort(.forbidden)
-        }
-
-        study.published = true
-        try await study.update(on: req.db)
 
         return .ok
     }

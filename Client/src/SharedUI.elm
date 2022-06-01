@@ -13,7 +13,7 @@ sharedFrame shared view =
     { title = view.title
     , body =
         column [ spacing 10, width fill, height fill ]
-            [ header shared, view.body ]
+            [ header view.title shared, view.body ]
     , over = view.over
     }
 
@@ -23,12 +23,13 @@ shadedRow attrs =
     row ([ padding 10, behindContent (UI.grayBox [ width fill, height fill ] none) ] ++ attrs)
 
 
-header : Shared.Model -> Element msg
-header shared =
+header : String -> Shared.Model -> Element msg
+header title shared =
     row [ padding 10, width fill ]
         [ shadedRow [ alignLeft ]
             [ UI.link [] { url = "/", label = text "Polinpin" }
             ]
+        , el [ centerX ] (text title)
         , shadedRow [ alignRight, spacing 20 ]
             (case shared.user of
                 Just _ ->
@@ -50,3 +51,19 @@ kindToString kind nameKind =
     case (kind, nameKind) of
         (Network.TreeTest, TitleCase) ->
             "Tree Test"
+
+        (Network.DesirabilityTest, TitleCase) ->
+            "Desirability Study"
+
+
+tabButton : a -> a -> (a -> msg) -> String -> Element msg
+tabButton currentTab forTab msg text =
+    (if currentTab == forTab then
+        UI.darkTextButton
+
+     else
+        UI.textButton
+    )
+        (Just (msg forTab))
+        []
+        text

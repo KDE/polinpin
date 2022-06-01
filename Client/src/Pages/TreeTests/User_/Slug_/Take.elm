@@ -14,7 +14,7 @@ import Task
 import Time
 import TraversalList exposing (TraversalList)
 import TreeManipulation
-import UI
+import UI exposing (par)
 import View exposing (View)
 
 
@@ -263,11 +263,6 @@ updateLoaded params msg model =
 
 
 -- VIEW LOADED
-
-
-par : String -> Element msg
-par txt =
-    paragraph [] [ text txt ]
 
 
 preTask : Element LoadedMsg

@@ -1,5 +1,6 @@
-module Network exposing (RequestStatus(..), StudyData, StudyKind(..), TreeNode(..), TreeStudyItem, TreeStudyResults, TreeStudyTask, TreeTestAnsweredQuestion, TreeTestObservation, TreeTestPastSelection, TreeTestStudyData, UserInformation, UserSession, login, me, myTreeTests, newTreeTest, publishTreeStudy, register, saveTreeStudy, treeStudyResults, treeStudySubmitObservation, treeTest, treeTestWithoutAuth)
+module Network exposing (DesirabilityStudyData, DesirabilityStudyItem, DesirabilityStudyWord, DesirabilityStudyWordResponse, DesirabilityStudyWordTag, RequestStatus(..), StudyData, StudyKind(..), TreeNode(..), TreeStudyItem, TreeStudyResults, TreeStudyTask, TreeTestAnsweredQuestion, TreeTestObservation, TreeTestPastSelection, TreeTestStudyData, UserInformation, UserSession, desirabilityStudy, desirabilityStudyResults, desirabilityStudySubmitObservation, desirabilityStudyWithoutAuth, imagePath, login, me, myStudies, newDesirabilityStudy, newTreeTest, publishStudy, register, saveDesirabilityStudy, saveTreeStudy, treeStudyResults, treeStudySubmitObservation, treeTest, treeTestWithoutAuth, uploadFile, DesirabilityStudyObservationData, DesirabilityStudyResults)
 
+import File exposing (File)
 import Http
 import Json.Decode as D
 import Json.Encode as E
@@ -151,22 +152,26 @@ kindDecoder =
                     "treeTest" ->
                         D.succeed TreeTest
 
+                    "desirabilityTest" ->
+                        D.succeed DesirabilityTest
+
                     _ ->
                         D.fail "Unknown case"
             )
 
 
-myTreeTests : UserSession -> (Result Http.Error (List StudyData) -> msg) -> Cmd msg
-myTreeTests session msg =
+myStudies : UserSession -> (Result Http.Error (List StudyData) -> msg) -> Cmd msg
+myStudies session msg =
     getHeaders
         { headers = sessionHeaders session
-        , url = endpoint "tree-tests/my"
+        , url = endpoint "studies/my"
         , expect = Http.expectJson msg (D.field "studies" (D.list studyDataDecoder))
         }
 
 
 type StudyKind
     = TreeTest
+    | DesirabilityTest
 
 
 maybeToList : Maybe a -> List a
@@ -188,6 +193,20 @@ newTreeTest session username title msg =
         }
 
 
+newDesirabilityStudy : UserSession -> String -> String -> (Result Http.Error String -> msg) -> Cmd msg
+newDesirabilityStudy session username title msg =
+    postHeaders
+        { headers = sessionHeaders session
+        , url = endpoint "desirability-studies/" ++ username
+        , expect = Http.expectString msg
+        , body =
+            Http.jsonBody
+                (E.object
+                    [ ( "title", E.string title ) ]
+                )
+        }
+
+
 treeTest : UserSession -> String -> String -> (Result Http.Error TreeTestStudyData -> msg) -> Cmd msg
 treeTest session username slug msg =
     getHeaders
@@ -195,6 +214,82 @@ treeTest session username slug msg =
         , url = endpoint "tree-tests/" ++ username ++ "/" ++ slug
         , expect = Http.expectJson msg treeTestStudyDataDecoder
         }
+
+
+desirabilityStudy : UserSession -> String -> String -> (Result Http.Error DesirabilityStudyData -> msg) -> Cmd msg
+desirabilityStudy session username slug msg =
+    getHeaders
+        { headers = sessionHeaders session
+        , url = endpoint "desirability-studies/" ++ username ++ "/" ++ slug
+        , expect = Http.expectJson msg desirabilityStudyDataDecoder
+        }
+
+
+desirabilityStudyWithoutAuth : Maybe String -> String -> String -> (Result Http.Error DesirabilityStudyData -> msg) -> Cmd msg
+desirabilityStudyWithoutAuth password username slug msg =
+    getHeaders
+        { headers = password |> Maybe.map (\p -> Http.header "StudyPassword" p) |> maybeToList
+        , url = endpoint "desirability-studies/" ++ username ++ "/" ++ slug
+        , expect = Http.expectJson msg desirabilityStudyDataDecoder
+        }
+
+
+type alias DesirabilityStudyData =
+    { studyData : StudyData
+    , wordBank : List DesirabilityStudyWord
+    , wordTags : List DesirabilityStudyWordTag
+    , items : List DesirabilityStudyItem
+    , numberOfWordsToSelect : Int
+    }
+
+
+desirabilityStudyDataDecoder : D.Decoder DesirabilityStudyData
+desirabilityStudyDataDecoder =
+    D.map5 DesirabilityStudyData
+        (D.field "studyData" studyDataDecoder)
+        (D.field "wordBank" (D.list desirabilityStudyWordDecoder))
+        (D.field "wordTags" (D.list desirabilityStudyWordTagDecoder))
+        (D.field "items" (D.list desirabilityStudyItemDecoder))
+        (D.field "numberOfWordsToSelect" D.int)
+
+
+type alias DesirabilityStudyItem =
+    { imageFileID : String
+    , description : String
+    }
+
+
+desirabilityStudyItemDecoder : D.Decoder DesirabilityStudyItem
+desirabilityStudyItemDecoder =
+    D.map2 DesirabilityStudyItem
+        (D.field "imageFileID" D.string)
+        (D.field "description" D.string)
+
+
+type alias DesirabilityStudyWordTag =
+    { tag : String
+    , description : String
+    }
+
+
+desirabilityStudyWordTagDecoder : D.Decoder DesirabilityStudyWordTag
+desirabilityStudyWordTagDecoder =
+    D.map2 DesirabilityStudyWordTag
+        (D.field "tag" D.string)
+        (D.field "description" D.string)
+
+
+type alias DesirabilityStudyWord =
+    { word : String
+    , tags : List String
+    }
+
+
+desirabilityStudyWordDecoder : D.Decoder DesirabilityStudyWord
+desirabilityStudyWordDecoder =
+    D.map2 DesirabilityStudyWord
+        (D.field "word" D.string)
+        (D.field "tags" (D.list D.string))
 
 
 treeTestWithoutAuth : Maybe String -> String -> String -> (Result Http.Error TreeTestStudyData -> msg) -> Cmd msg
@@ -306,11 +401,62 @@ saveTreeStudy session username slug tree tasks msg =
         }
 
 
-publishTreeStudy : UserSession -> String -> String -> (Result Http.Error () -> msg) -> Cmd msg
-publishTreeStudy session username slug msg =
+saveDesirabilityStudy :
+    UserSession
+    -> String
+    -> String
+    -> List DesirabilityStudyWord
+    -> List DesirabilityStudyWordTag
+    -> List DesirabilityStudyItem
+    -> Int
+    -> (Result Http.Error () -> msg)
+    -> Cmd msg
+saveDesirabilityStudy session username slug words tags items selectCount msg =
+    patchHeaders
+        { headers = sessionHeaders session
+        , url = endpoint "desirability-studies/" ++ username ++ "/" ++ slug
+        , expect = Http.expectWhatever msg
+        , body =
+            Http.jsonBody
+                (E.object
+                    [ ( "wordBank", E.list encodeDesirabilityStudyWord words )
+                    , ( "wordTags", E.list encodeDesirabilityStudyWordTag tags )
+                    , ( "items", E.list encodeDesirabilityStudyItem items )
+                    , ( "numberOfWordsToSelect", E.int selectCount )
+                    ]
+                )
+        }
+
+
+encodeDesirabilityStudyWord : DesirabilityStudyWord -> E.Value
+encodeDesirabilityStudyWord word =
+    E.object
+        [ ( "word", E.string word.word )
+        , ( "tags", E.list E.string word.tags )
+        ]
+
+
+encodeDesirabilityStudyWordTag : DesirabilityStudyWordTag -> E.Value
+encodeDesirabilityStudyWordTag tag =
+    E.object
+        [ ( "tag", E.string tag.tag )
+        , ( "description", E.string tag.description )
+        ]
+
+
+encodeDesirabilityStudyItem : DesirabilityStudyItem -> E.Value
+encodeDesirabilityStudyItem item =
+    E.object
+        [ ( "imageFileID", E.string item.imageFileID )
+        , ( "description", E.string item.description )
+        ]
+
+
+publishStudy : UserSession -> String -> String -> (Result Http.Error () -> msg) -> Cmd msg
+publishStudy session username slug msg =
     postHeaders
         { headers = sessionHeaders session
-        , url = endpoint "tree-tests/" ++ username ++ "/" ++ slug ++ "/publish"
+        , url = endpoint "studies/" ++ username ++ "/" ++ slug ++ "/publish"
         , expect = Http.expectWhatever msg
         , body = Http.emptyBody
         }
@@ -405,6 +551,37 @@ treeStudyResults session username slug msg =
         }
 
 
+desirabilityStudyResults : UserSession -> String -> String -> (Result Http.Error DesirabilityStudyResults -> msg) -> Cmd msg
+desirabilityStudyResults session username slug msg =
+    getHeaders
+        { headers = sessionHeaders session
+        , url = endpoint "desirability-studies/" ++ username ++ "/" ++ slug ++ "/results"
+        , expect = Http.expectJson msg desirabilityStudyResultsDecoder
+        }
+
+
+type alias DesirabilityStudyResults =
+    { observations : List DesirabilityStudyObservationData
+    }
+
+
+desirabilityStudyResultsDecoder : D.Decoder DesirabilityStudyResults
+desirabilityStudyResultsDecoder =
+    D.map DesirabilityStudyResults
+        (D.field "observations" (D.list desirabilityStudyObservationDataDecoder))
+
+
+type alias DesirabilityStudyObservationData =
+    { responses : List DesirabilityStudyWordResponse
+    }
+
+
+desirabilityStudyObservationDataDecoder : D.Decoder DesirabilityStudyObservationData
+desirabilityStudyObservationDataDecoder =
+    D.map DesirabilityStudyObservationData
+        (D.field "responses" (D.list desirabilityStudyWordResponseDecoder))
+
+
 treeStudySubmitObservation : Maybe String -> String -> String -> TreeTestObservation -> (Result Http.Error () -> msg) -> Cmd msg
 treeStudySubmitObservation password username slug observations msg =
     postHeaders
@@ -417,3 +594,59 @@ treeStudySubmitObservation password username slug observations msg =
                     [ ( "result", encodeTreeTestObservation observations )
                     ]
         }
+
+
+desirabilityStudySubmitObservation :
+    Maybe String
+    -> String
+    -> String
+    -> List DesirabilityStudyWordResponse
+    -> (Result Http.Error () -> msg)
+    -> Cmd msg
+desirabilityStudySubmitObservation password username slug observations msg =
+    postHeaders
+        { headers = password |> Maybe.map (\p -> Http.header "StudyPassword" p) |> maybeToList
+        , url = endpoint "desirability-studies/" ++ username ++ "/" ++ slug ++ "/completed"
+        , expect = Http.expectWhatever msg
+        , body =
+            Http.jsonBody <|
+                E.object
+                    [ ( "responses", E.list encodeDesirabilityStudyWordResponse observations )
+                    ]
+        }
+
+
+imagePath : String -> String
+imagePath path =
+    endpoint "uploads/" ++ path
+
+
+uploadFile : UserSession -> File -> (Result Http.Error String -> msg) -> Cmd msg
+uploadFile session file msg =
+    postHeaders
+        { headers = sessionHeaders session
+        , url = endpoint "files/upload"
+        , expect = Http.expectString msg
+        , body = Http.fileBody file
+        }
+
+
+type alias DesirabilityStudyWordResponse =
+    { words : List String
+    , rating : Int
+    }
+
+
+encodeDesirabilityStudyWordResponse : DesirabilityStudyWordResponse -> E.Value
+encodeDesirabilityStudyWordResponse response =
+    E.object
+        [ ( "words", E.list E.string response.words )
+        , ( "rating", E.int response.rating )
+        ]
+
+
+desirabilityStudyWordResponseDecoder : D.Decoder DesirabilityStudyWordResponse
+desirabilityStudyWordResponseDecoder =
+    D.map2 DesirabilityStudyWordResponse
+        (D.field "words" (D.list D.string))
+        (D.field "rating" D.int)

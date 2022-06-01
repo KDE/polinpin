@@ -50,7 +50,7 @@ init : Auth.User -> ( Model, Effect Msg )
 init user =
     ( Model Nothing (CreatingDialog Nothing "" Network.NoRequest)
     , Effect.fromCmd <|
-        Network.myTreeTests (Network.UserSession user.token) StudiesObtained
+        Network.myStudies (Network.UserSession user.token) StudiesObtained
     )
 
 
@@ -64,8 +64,18 @@ type Msg
     | CloseCreatingDialog
     | SetCreatingName String
     | CreateStudy Network.StudyKind
-    | CreateStudyObtained (Result Http.Error String)
-    | OpenStudy String
+    | CreateStudyObtained Network.StudyKind (Result Http.Error String)
+    | OpenStudy Network.StudyKind String
+
+
+route : Network.StudyKind -> { user : String, slug : String } -> Gen.Route.Route
+route kind =
+    case kind of
+        Network.DesirabilityTest ->
+            Gen.Route.DesirabilityStudies__User___Slug___Edit
+
+        Network.TreeTest ->
+            Gen.Route.TreeTests__User___Slug___Edit
 
 
 update : Auth.User -> Request.With Params -> Msg -> Model -> ( Model, Effect Msg )
@@ -104,10 +114,24 @@ update user req msg model =
                             (Network.UserSession user.token)
                             user.username
                             model.creatingDialog.name
-                            CreateStudyObtained
+                            (CreateStudyObtained Network.TreeTest)
                     )
 
-        CreateStudyObtained ((Ok slug) as result) ->
+                Network.DesirabilityTest ->
+                    ( let
+                        c =
+                            model.creatingDialog
+                      in
+                      { model | creatingDialog = { c | outgoing = Network.PendingRequest } }
+                    , Effect.fromCmd <|
+                        Network.newDesirabilityStudy
+                            (Network.UserSession user.token)
+                            user.username
+                            model.creatingDialog.name
+                            (CreateStudyObtained Network.DesirabilityTest)
+                    )
+
+        CreateStudyObtained kind ((Ok slug) as result) ->
             ( let
                 c =
                     model.creatingDialog
@@ -115,11 +139,11 @@ update user req msg model =
               { model | creatingDialog = { c | outgoing = Network.ResultReceived result } }
             , Effect.fromCmd <|
                 Request.pushRoute
-                    (Gen.Route.TreeTests__User___Slug___Edit { user = user.username, slug = slug })
+                    (route kind { user = user.username, slug = slug })
                     req
             )
 
-        CreateStudyObtained ((Err _) as result) ->
+        CreateStudyObtained _ ((Err _) as result) ->
             ( let
                 c =
                     model.creatingDialog
@@ -128,11 +152,11 @@ update user req msg model =
             , Effect.none
             )
 
-        OpenStudy slug ->
+        OpenStudy kind slug ->
             ( model
             , Effect.fromCmd <|
                 Request.pushRoute
-                    (Gen.Route.TreeTests__User___Slug___Edit { user = user.username, slug = slug })
+                    (route kind { user = user.username, slug = slug })
                     req
             )
 
@@ -169,11 +193,11 @@ viewStudy : Network.StudyData -> Element Msg
 viewStudy data =
     row
         [ width fill, paddingXY 0 8 ]
-        [ column [ alignLeft ] 
+        [ column [ alignLeft ]
             [ text data.title
             , UI.sizedLabel -1 [] (SharedUI.kindToString data.kind SharedUI.TitleCase)
             ]
-        , UI.textButton (Just (OpenStudy data.slug)) [ alignRight ] "View"
+        , UI.textButton (Just (OpenStudy data.kind data.slug)) [ alignRight ] "View"
         ]
 
 
@@ -253,7 +277,10 @@ view shared model =
                         Nothing ->
                             [ loadingView ]
                      )
-                        ++ [ UI.textButton (Just (OpenCreatingDialog Network.TreeTest)) [ width fill ] "Create A Tree Test"
+                        ++ [ row [ width fill, spacing 10 ]
+                                [ UI.textButton (Just (OpenCreatingDialog Network.TreeTest)) [ width fill ] "Create A Tree Test"
+                                , UI.textButton (Just (OpenCreatingDialog Network.DesirabilityTest)) [ width fill ] "Create A Desirability Study"
+                                ]
                            ]
                     )
         , over = Maybe.map (creatingDialog model.creatingDialog) model.creatingDialog.kind

@@ -5,9 +5,6 @@ import Vapor
 
 // configures your application
 public func configure(_ app: Application) throws {
-    // uncomment to serve files from /Public folder
-    // app.middleware.use(FileMiddleware(publicDirectory: app.directory.publicDirectory))
-
     let corsConfiguration = CORSMiddleware.Configuration(
         allowedOrigin: .all,
         allowedMethods: [.GET, .POST, .PUT, .OPTIONS, .DELETE, .PATCH],
@@ -20,6 +17,7 @@ public func configure(_ app: Application) throws {
     app.databases.use(.sqlite(.file("db.sqlite")), as: .sqlite)
 
     app.migrations.add(InitialMigration())
+    app.migrations.add(DesirabilityFilesMigration())
 
     app.views.use(.leaf)
 

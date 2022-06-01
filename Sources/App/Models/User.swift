@@ -16,6 +16,9 @@ final class User: Model, Authenticatable {
     @Field(key: "password")
     var password: String
 
+    @Children(for: \.$owner)
+    var files: [DBFile]
+
     init() { }
 
     init(name: String, username: String, password: String) {
