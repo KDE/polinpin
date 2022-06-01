@@ -4,11 +4,11 @@ import Fluent
 final class FileController: RouteCollection {
     func boot(routes: RoutesBuilder) throws {
         let files = routes.grouped("files")
-        files.post("upload", use: upload)
+        files.on(.POST, "upload", body: .stream, use: upload)
     }
     func upload(req: Request) async throws -> String {
         let user: User = try req.auth.require()
-        
+
         guard let data = try await req.body.collect(max: 1 << 24).get() else {
             throw Abort(.badRequest)
         }
