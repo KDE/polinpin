@@ -9,7 +9,7 @@ final class FileController: RouteCollection {
     func upload(req: Request) async throws -> String {
         let user: User = try req.auth.require()
         
-        guard let data = try await req.body.collect().get() else {
+        guard let data = try await req.body.collect(max: 1 << 24).get() else {
             throw Abort(.badRequest)
         }
         guard let mimetype = req.headers.contentType else {
