@@ -8,7 +8,7 @@ import Json.Encode as E
 
 serverUrl : String
 serverUrl =
-    "http://127.0.0.1:8080"
+    "https://api.polinpin.blackquill.cc"
 
 
 endpoint : String -> String
