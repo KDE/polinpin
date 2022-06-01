@@ -295,7 +295,16 @@ viewItem model ( item, response ) =
             UI.textButton (Just NextQuestion) [ width fill ] "Next Image"
 
           else
-            UI.textButton Nothing [ width fill, alpha 0.5 ] "Next Image"
+            UI.textButton Nothing [ width fill, alpha 0.5, UI.notAllowedCursor ] "Next Image"
+        , el [ UI.fontSize -1, centerX ]
+            (text
+                (if response.rating /= -1 then
+                    "All right!"
+
+                 else
+                    "Rate the image's appeal"
+                )
+            )
         , UI.grayBox [ width fill, padding 20 ] <|
             row [ centerX, spacing 10 ]
                 (List.map
@@ -312,6 +321,15 @@ viewItem model ( item, response ) =
                     )
                     (List.range 1 7)
                 )
+        , el [ UI.fontSize -1, centerX ]
+            (text
+                (if List.length response.words == model.numberOfWordsToSelect then
+                    "All right!"
+
+                 else
+                    "Select " ++ (model.numberOfWordsToSelect - List.length response.words |> String.fromInt) ++ " more words"
+                )
+            )
         , row [ width fill, spacing 20 ]
             [ UI.grayBox [ width (fillPortion 1), padding 20, alignTop ] <|
                 column [ width fill, spacing 10 ]
@@ -327,6 +345,7 @@ viewItem model ( item, response ) =
                     )
             ]
         ]
+
 
 postTask : LoadedModel -> Element LoadedMsg
 postTask model =

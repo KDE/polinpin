@@ -1,4 +1,4 @@
-module UI exposing (Palette, blackLine, box, currentPasswordInput, darkTextButton, emailInput, fontSize, grayBox, intScale, line, link, multilineInput, newPasswordInput, par, scale, searchInput, sizedLabel, smallTealTextButton, smallTextButton, solidBox, solidRoughBox, spellCheckedInput, tealTextButton, textButton, textInput, transtext, usernameInput, withScrim)
+module UI exposing (Palette, blackLine, box, currentPasswordInput, darkTextButton, emailInput, fontSize, grayBox, intScale, line, link, multilineInput, newPasswordInput, par, scale, searchInput, sizedLabel, smallTealTextButton, smallTextButton, solidBox, solidRoughBox, spellCheckedInput, tealTextButton, textButton, textInput, transtext, usernameInput, withScrim, notAllowedCursor)
 
 import Element exposing (..)
 import Element.Background as Background
@@ -173,6 +173,9 @@ transtext : String -> Element msg
 transtext txt =
     el [ htmlAttribute (style "pointer-events" "none") ] (text txt)
 
+notAllowedCursor : Attribute msg
+notAllowedCursor =
+    htmlAttribute (style "cursor" "not-allowed")
 
 abstractButton : Palette -> Maybe msg -> List (Attribute msg) -> Element msg -> Element msg
 abstractButton palette msg attrs child =
