@@ -14,6 +14,7 @@ import List.Extra
 import Network
 import Page
 import Request
+import Round
 import Set
 import Shared
 import SharedUI
@@ -516,21 +517,23 @@ viewResultsItems { items, observations } =
             observationsByItem observations
                 |> wordPercents
                 |> List.map2 Tuple.pair items
+                |> List.map2 Tuple.pair (observationsByItem observations |> List.map averageRating)
     in
     column [ spacing 20, width (fill |> maximum 600) ]
         (List.map viewResultsItem data)
 
 
-viewResultsItem : ( Network.DesirabilityStudyItem, List ( String, Float ) ) -> Element ResultsMsg
-viewResultsItem ( item, data ) =
+viewResultsItem : ( Float, ( Network.DesirabilityStudyItem, List ( String, Float ) ) ) -> Element ResultsMsg
+viewResultsItem ( average, ( item, data ) ) =
     UI.grayBox [ width fill, padding 20 ] <|
         column [ width fill, spacing 20 ]
-            ([ row [ spacing 20 ]
+            ([ row [ spacing 20, width fill ]
                 [ image [ width (fill |> maximum 100) ]
                     { src = Network.imagePath item.imageFileID
                     , description = ""
                     }
                 , el [ alignLeft ] (text item.description)
+                , el [ alignRight ] (text <| "Average Rating: " ++ Round.round 1 average)
                 ]
              , UI.blackLine [ width fill ]
              ]
@@ -560,10 +563,12 @@ viewResultsWordBankItem { word, tags } =
             , wrappedRow [ spacing 10, UI.fontSize -1 ] (List.map text tags)
             ]
 
+
 viewResultsTags : ResultsModel -> Element ResultsMsg
 viewResultsTags { wordTags } =
     column [ spacing 20, width (fill |> maximum 600) ]
         (List.map viewResultsTag wordTags)
+
 
 viewResultsTag : Network.DesirabilityStudyWordTag -> Element ResultsMsg
 viewResultsTag { tag, description } =
@@ -572,6 +577,8 @@ viewResultsTag { tag, description } =
             [ el [ Font.bold ] (text tag)
             , UI.par description
             ]
+
+
 
 -- STATISTICS
 
@@ -616,6 +623,14 @@ wordPercentsForItem responses =
         |> mapSecond (\k -> toFloat k / toFloat (List.length responses))
         |> List.sortBy Tuple.second
         |> List.reverse
+
+
+averageRating : List Network.DesirabilityStudyWordResponse -> Float
+averageRating item =
+    item
+        |> List.map .rating
+        |> List.sum
+        |> (\x -> (x |> toFloat) / (List.length item |> toFloat))
 
 
 wordPercents : List (List Network.DesirabilityStudyWordResponse) -> List (List ( String, Float ))
