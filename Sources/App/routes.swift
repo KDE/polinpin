@@ -8,6 +8,7 @@ func routes(_ app: Application) throws {
     try app.register(collection: DesirabilityTestController())
     try app.register(collection: StudyController())
     try app.register(collection: FileController())
+    try app.register(collection: OAuth2Controller())
 
     app.get("uploads", "**") { req -> EventLoopFuture<Response> in
         guard var path = req.parameters.getCatchall().joined(separator: "/").removingPercentEncoding else {

@@ -16,6 +16,12 @@ final class User: Model, Authenticatable {
     @Field(key: "password")
     var password: String
 
+    @OptionalField(key: "oauth2_provider")
+    var externalOAuthProvider: String?
+
+    @OptionalField(key: "oauth2_identity")
+    var externalOAuthIdentity: String?
+
     @Children(for: \.$owner)
     var files: [DBFile]
 
@@ -25,6 +31,13 @@ final class User: Model, Authenticatable {
         self.name = name
         self.username = username
         self.password = password
+    }
+    init(name: String, username: String, provider: String, identity: String) {
+        self.name = name
+        self.username = username
+        self.password = "."
+        self.externalOAuthProvider = provider
+        self.externalOAuthIdentity = identity
     }
 }
 

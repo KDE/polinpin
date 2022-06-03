@@ -1,4 +1,4 @@
-module UI exposing (Palette, blackLine, box, currentPasswordInput, darkTextButton, emailInput, fontSize, grayBox, intScale, line, link, multilineInput, newPasswordInput, par, scale, searchInput, sizedLabel, smallTealTextButton, smallTextButton, solidBox, solidRoughBox, spellCheckedInput, tealTextButton, textButton, textInput, transtext, usernameInput, withScrim, notAllowedCursor)
+module UI exposing (Palette, blackLine, box, currentPasswordInput, darkTextButton, emailInput, fontSize, grayBox, intScale, line, link, multilineInput, newPasswordInput, par, scale, searchInput, sizedLabel, smallTealTextButton, smallTextButton, solidBox, solidRoughBox, spellCheckedInput, tealTextButton, textButton, textInput, transtext, usernameInput, withScrim, notAllowedCursor, linkButton)
 
 import Element exposing (..)
 import Element.Background as Background
@@ -200,6 +200,15 @@ textButton : Maybe msg -> List (Attribute msg) -> String -> Element msg
 textButton msg attrs txt =
     abstractButton darkGrayPalette msg (padding 10 :: attrs) (text txt)
 
+linkButton : String -> List (Attribute msg) -> String -> Element msg
+linkButton url attrs txt =
+    let
+        htmlEl =
+            node "rough-rectangle"
+                (paletteToAttribute darkGrayPalette)
+                []
+    in
+    Element.link ([padding 10, behindContent (html htmlEl)] ++ attrs) { url = url, label = el [ centerX ] (text txt) }
 
 darkTextButton : Maybe msg -> List (Attribute msg) -> String -> Element msg
 darkTextButton msg attrs txt =

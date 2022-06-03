@@ -11,6 +11,8 @@ port module Shared exposing
     , userDecoder
     )
 
+import Dict
+import Gen.Route
 import Http
 import Json.Decode as D
 import Json.Encode as E
@@ -66,15 +68,31 @@ type Msg
 
 
 init : Request -> Flags -> ( Model, Cmd Msg )
-init _ flags =
+init req flags =
     let
-        (user, msg) =
-            case D.decodeValue userDecoder flags of
-                Ok u ->
-                    (Just u, Network.me (Network.UserSession u.token) (CheckLoginResult u.token))
+        override =
+            Maybe.map3 (\a b c -> ( a, b, c ))
+                (Dict.get "username" req.query)
+                (Dict.get "name" req.query)
+                (Dict.get "token" req.query)
 
-                Err _ ->
-                    (Nothing, Cmd.none)
+        ( user, msg ) =
+            case override of
+                Just ( username, name, token ) ->
+                    ( Just (User name username token)
+                    , Cmd.batch
+                        [ Network.me (Network.UserSession token) (CheckLoginResult token)
+                        , Request.replaceRoute Gen.Route.Home_ { req | query = Dict.empty }
+                        ]
+                    )
+
+                _ ->
+                    case D.decodeValue userDecoder flags of
+                        Ok u ->
+                            ( Just u, Network.me (Network.UserSession u.token) (CheckLoginResult u.token) )
+
+                        Err _ ->
+                            ( Nothing, Cmd.none )
     in
     ( Model user, msg )
 
@@ -98,7 +116,7 @@ update _ msg model =
             ( model, Cmd.none )
 
         CheckLoginResult tok (Ok info) ->
-            ( { model | user = Just (User info.name info.username tok) }, Cmd.none )
+            ( { model | user = Just (User info.name info.username tok) }, storeUser (encodeUser (User info.name info.username tok)) )
 
         CheckLoginResult _ (Err _) ->
             ( { model | user = Nothing }, Cmd.none )

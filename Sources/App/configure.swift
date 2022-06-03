@@ -18,6 +18,7 @@ public func configure(_ app: Application) throws {
 
     app.migrations.add(InitialMigration())
     app.migrations.add(DesirabilityFilesMigration())
+    app.migrations.add(OAuthMigration())
 
     app.views.use(.leaf)
 

@@ -1,0 +1,15 @@
+{
+    "redirectURL": "https://api.polinpin.blackquill.cc/oauth2/callback",
+    "clientLoggedInURL": "http://polinpin.blackquill.cc/",
+    "normalLoginEnabled": true,
+    "services": [
+        {
+            "id": "google",
+            "name": "Google",
+            "clientID": "< client id >",
+            "clientSecret": "< client secret >",
+            "discoveryDocument": "https://accounts.google.com/.well-known/openid-configuration",
+            "authorizationURL": "https://accounts.google.com/o/oauth2/auth"
+        }
+    ]
+}

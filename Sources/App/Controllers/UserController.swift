@@ -22,6 +22,8 @@ final class UserController: RouteCollection {
 
         guard let user = try await User.query(on: req.db)
             .filter(\.$username == request.username)
+            .filter(\.$externalOAuthProvider == nil)
+            .filter(\.$externalOAuthIdentity == nil)
             .first() else {
                 throw Abort(.notFound, reason: "User \(request.username) doesn't exist")
             }

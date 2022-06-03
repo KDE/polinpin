@@ -1,4 +1,4 @@
-module Network exposing (DesirabilityStudyData, DesirabilityStudyItem, DesirabilityStudyWord, DesirabilityStudyWordResponse, DesirabilityStudyWordTag, RequestStatus(..), StudyData, StudyKind(..), TreeNode(..), TreeStudyItem, TreeStudyResults, TreeStudyTask, TreeTestAnsweredQuestion, TreeTestObservation, TreeTestPastSelection, TreeTestStudyData, UserInformation, UserSession, desirabilityStudy, desirabilityStudyResults, desirabilityStudySubmitObservation, desirabilityStudyWithoutAuth, imagePath, login, me, myStudies, newDesirabilityStudy, newTreeTest, publishStudy, register, saveDesirabilityStudy, saveTreeStudy, treeStudyResults, treeStudySubmitObservation, treeTest, treeTestWithoutAuth, uploadFile, DesirabilityStudyObservationData, DesirabilityStudyResults)
+module Network exposing (DesirabilityStudyData, DesirabilityStudyItem, DesirabilityStudyObservationData, DesirabilityStudyResults, DesirabilityStudyWord, DesirabilityStudyWordResponse, DesirabilityStudyWordTag, OAuth2Service, OAuth2ServiceConfig, RequestStatus(..), StudyData, StudyKind(..), TreeNode(..), TreeStudyItem, TreeStudyResults, TreeStudyTask, TreeTestAnsweredQuestion, TreeTestObservation, TreeTestPastSelection, TreeTestStudyData, UserInformation, UserSession, desirabilityStudy, desirabilityStudyResults, desirabilityStudySubmitObservation, desirabilityStudyWithoutAuth, imagePath, login, me, myStudies, newDesirabilityStudy, newTreeTest, oauth2Services, publishStudy, register, saveDesirabilityStudy, saveTreeStudy, treeStudyResults, treeStudySubmitObservation, treeTest, treeTestWithoutAuth, uploadFile)
 
 import File exposing (File)
 import Http
@@ -650,3 +650,36 @@ desirabilityStudyWordResponseDecoder =
     D.map2 DesirabilityStudyWordResponse
         (D.field "words" (D.list D.string))
         (D.field "rating" D.int)
+
+
+type alias OAuth2Service =
+    { name : String
+    , url : String
+    }
+
+
+oauth2ServiceDecoder : D.Decoder OAuth2Service
+oauth2ServiceDecoder =
+    D.map2 OAuth2Service
+        (D.field "name" D.string)
+        (D.field "url" D.string)
+
+
+type alias OAuth2ServiceConfig =
+    { services : List OAuth2Service
+    , normalLoginPossible : Bool
+    }
+
+
+oauth2Services : (Result Http.Error OAuth2ServiceConfig -> msg) -> Cmd msg
+oauth2Services msg =
+    getHeaders
+        { url = endpoint "oauth2/services"
+        , expect =
+            Http.expectJson msg
+                (D.map2 OAuth2ServiceConfig
+                    (D.field "services" (D.list oauth2ServiceDecoder))
+                    (D.field "normalLoginEnabled" D.bool)
+                )
+        , headers = []
+        }
