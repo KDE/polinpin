@@ -47,6 +47,15 @@
         }
       },
       {
+        "package": "fluent-mysql-driver",
+        "repositoryURL": "https://github.com/vapor/fluent-mysql-driver.git",
+        "state": {
+          "branch": null,
+          "revision": "dc9765f0bff524d56e618f0efee4ca3db6cc6049",
+          "version": "4.0.3"
+        }
+      },
+      {
         "package": "fluent-sqlite-driver",
         "repositoryURL": "https://github.com/vapor/fluent-sqlite-driver.git",
         "state": {
@@ -80,6 +89,24 @@
           "branch": null,
           "revision": "0d55c35e788451ee27222783c7d363cb88092fab",
           "version": "4.5.2"
+        }
+      },
+      {
+        "package": "mysql-kit",
+        "repositoryURL": "https://github.com/vapor/mysql-kit.git",
+        "state": {
+          "branch": null,
+          "revision": "f54e0876fce2d68551be0e704b3a94f78eedb9f8",
+          "version": "4.5.0"
+        }
+      },
+      {
+        "package": "mysql-nio",
+        "repositoryURL": "https://github.com/vapor/mysql-nio.git",
+        "state": {
+          "branch": null,
+          "revision": "f0e8ad7e18e870e8665311d70bf3f01dcd6024a8",
+          "version": "1.4.0"
         }
       },
       {

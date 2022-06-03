@@ -1,0 +1,7 @@
+{
+    "settings": {
+        "mysqlURL": {
+            "url": "mysql://vapor_username:vapor_password@localhost:3306/vapor_database"
+        }
+    }
+}

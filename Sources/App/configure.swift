@@ -1,7 +1,19 @@
 import Fluent
 import FluentSQLiteDriver
+import FluentMySQLDriver
 import Leaf
 import Vapor
+
+struct DatabaseConfiguration: Codable {
+    enum Kind: Codable {
+        case sqlite(file: String)
+        case mysql(hostname: String, port: Int, username: String, password: String, database: String)
+        case mysqlURL(url: String)
+    }
+    var settings: Kind
+}
+
+let dbConfig = try! JSONDecoder().decode(DatabaseConfiguration.self, from: try! String(contentsOfFile: "Polinpin Database Configuration.json").data(using: .utf8)!)
 
 // configures your application
 public func configure(_ app: Application) throws {
@@ -14,7 +26,21 @@ public func configure(_ app: Application) throws {
     // cors middleware should come before default error middleware using `at: .beginning`
     app.middleware.use(cors, at: .beginning)
 
-    app.databases.use(.sqlite(.file("db.sqlite")), as: .sqlite)
+    switch dbConfig.settings {
+    case .sqlite(let file):
+        app.databases.use(.sqlite(.file(file)), as: .sqlite)
+    case .mysql(let hostname, let port, let username, let password, let database):
+        app.databases.use(.mysql(
+            hostname: hostname,
+            port: port,
+            username: username,
+            password: password,
+            database: database
+        ), as: .mysql)
+    case .mysqlURL(let url):
+        app.databases.use(try .mysql(url: url), as: .sqlite)
+        break
+    }
 
     app.migrations.add(InitialMigration())
     app.migrations.add(DesirabilityFilesMigration())

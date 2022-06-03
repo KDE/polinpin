@@ -1,0 +1,7 @@
+{
+    "settings": {
+        "sqlite": {
+            "file": "db.sqlite"
+        }
+    }
+}
