@@ -1,6 +1,7 @@
 import Fluent
 import FluentSQLiteDriver
 import FluentMySQLDriver
+import FluentPostgresDriver
 import Leaf
 import Vapor
 
@@ -8,6 +9,7 @@ struct DatabaseConfiguration: Codable {
     enum Kind: Codable {
         case sqlite(file: String)
         case mysql(hostname: String, port: Int, username: String, password: String, database: String)
+        case postgres(hostname: String, port: Int, username: String, password: String, database: String)
         case mysqlURL(url: String)
     }
     var settings: Kind
@@ -37,6 +39,14 @@ public func configure(_ app: Application) throws {
             password: password,
             database: database
         ), as: .mysql)
+    case .postgres(let hostname, let port, let username, let password, let database):
+        app.databases.use(.postgres(
+            hostname: hostname,
+            port: port,
+            username: username,
+            password: password,
+            database: database
+        ), as: .psql)
     case .mysqlURL(let url):
         app.databases.use(try .mysql(url: url), as: .sqlite)
         break

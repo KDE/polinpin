@@ -1,0 +1,11 @@
+{
+    "settings": {
+        "postgres": {
+            "hostname": "localhost",
+            "port": 3306,
+            "username": "vapor_username",
+            "password": "vapor_password",
+            "database": "vapor_database"
+        }
+    }
+}
