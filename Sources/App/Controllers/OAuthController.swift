@@ -20,9 +20,11 @@ struct OAuthConfig: Codable {
 
 struct DiscoveryDocument: Codable {
     var tokenEndpoint: String
+    var userInfoEndpoint: String
 
     enum CodingKeys: String, CodingKey {
         case tokenEndpoint = "token_endpoint"
+        case userInfoEndpoint = "userinfo_endpoint"
     }
 }
 
@@ -148,7 +150,6 @@ final class OAuth2Controller: RouteCollection {
         }
         struct TokenResponse: Decodable {
             var access_token: String
-            var id_token: String
         }
         let response = try JSONDecoder().decode(TokenResponse.self, from: claimBody)
         struct UserData: Decodable {
@@ -156,14 +157,11 @@ final class OAuth2Controller: RouteCollection {
             var name: String?
             var email: String?
         }
-        let split = response.id_token.split(separator: ".", maxSplits: 3)
-        guard let second = split[safe: 1] else {
-            throw Abort(.internalServerError, reason: "bad JWT, not split")
+        let userInfoResp = try await req.client.get(URI(string: discoveryDoc.userInfoEndpoint), headers: ["Authorization": "Bearer \(response.access_token)"])
+        guard let userInfoBody = userInfoResp.body else {
+            throw Abort(.internalServerError, reason: "Failed to get body for user info")
         }
-        guard let bytes = second.data(using: .utf8)?.base64URLDecodedBytes() else {
-            throw Abort(.internalServerError, reason: "bad JWT, second chunk was not base64 url data")
-        }
-        let userData = try JSONDecoder().decode(UserData.self, from: Data(bytes))
+        let userData = try JSONDecoder().decode(UserData.self, from: userInfoBody)
 
         let token: String
         let theUser: User
@@ -212,82 +210,6 @@ final class OAuth2Controller: RouteCollection {
         clientURL.queryItems = queryItems
 
         return req.redirect(to: clientURL.url!.absoluteString, type: .temporary)
-    }
-}
-
-fileprivate extension DataProtocol {
-    func copyBytes() -> [UInt8] {
-        if let array = self.withContiguousStorageIfAvailable({ buffer in
-            return [UInt8](buffer)
-        }) {
-            return array
-        } else {
-            let buffer = UnsafeMutableBufferPointer<UInt8>.allocate(capacity: self.count)
-            self.copyBytes(to: buffer)
-            defer { buffer.deallocate() }
-            return [UInt8](buffer)
-        }
-    }
-
-    func base64URLDecodedBytes() -> [UInt8] {
-        return Data(base64Encoded: Data(self.copyBytes()).base64URLUnescaped())?.copyBytes() ?? []
-    }
-
-    func base64URLEncodedBytes() -> [UInt8] {
-        return Data(self.copyBytes()).base64EncodedData().base64URLEscaped().copyBytes()
-    }
-}
-
-/// MARK: Data Escape
-fileprivate extension Data {
-    /// Converts base64-url encoded data to a base64 encoded data.
-    ///
-    /// https://tools.ietf.org/html/rfc4648#page-7
-    mutating func base64URLUnescape() {
-        for (i, byte) in self.enumerated() {
-            switch byte {
-            case 0x2D: self[self.index(self.startIndex, offsetBy: i)] = 0x2B
-            case 0x5F: self[self.index(self.startIndex, offsetBy: i)] = 0x2F
-            default: break
-            }
-        }
-        /// https://stackoverflow.com/questions/43499651/decode-base64url-to-base64-swift
-        let padding = count % 4
-        if padding > 0 {
-            self += Data(repeating: 0x3D, count: 4 - count % 4)
-        }
-    }
-
-    /// Converts base64 encoded data to a base64-url encoded data.
-    ///
-    /// https://tools.ietf.org/html/rfc4648#page-7
-    mutating func base64URLEscape() {
-        for (i, byte) in enumerated() {
-            switch byte {
-            case 0x2B: self[self.index(self.startIndex, offsetBy: i)] = 0x2D
-            case 0x2F: self[self.index(self.startIndex, offsetBy: i)] = 0x5F
-            default: break
-            }
-        }
-        self = split(separator: 0x3D).first ?? .init()
-    }
-
-    /// Converts base64-url encoded data to a base64 encoded data.
-    ///
-    /// https://tools.ietf.org/html/rfc4648#page-7
-    func base64URLUnescaped() -> Data {
-        var data = self
-        data.base64URLUnescape()
-        return data
-    }
-
-    /// Converts base64 encoded data to a base64-url encoded data.
-    ///
-    /// https://tools.ietf.org/html/rfc4648#page-7
-    func base64URLEscaped() -> Data {
-        var data = self
-        data.base64URLEscape()
-        return data
     }
 }
 
