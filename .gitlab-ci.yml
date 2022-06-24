@@ -3,7 +3,7 @@ client:
   script:
     - npm install -g elm elm-spa
     - cd Client
-    - elm-spa make
+    - elm-spa make --optimize
   artifacts:
     paths:
       - Client/public
