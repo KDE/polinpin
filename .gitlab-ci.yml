@@ -14,7 +14,6 @@ server:
     - apt-get update -qy
     - apt-get install -y libsqlite3-dev upx
     - swift build -c release -Xswiftc -static-executable
-    - upx .build/release/Run
     - mv .build/release/Run Polinpin
   artifacts:
     paths:
