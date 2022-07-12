@@ -13,6 +13,18 @@ server:
   script:
     - apt-get update -qy
     - apt-get install -y libsqlite3-dev upx
+    - rm /usr/lib/x86_64-linux-gnu/libanl.a
+         /usr/lib/x86_64-linux-gnu/libc.a
+         /usr/lib/x86_64-linux-gnu/libc_nonshared.a
+         /usr/lib/x86_64-linux-gnu/libdl.a
+         /usr/lib/x86_64-linux-gnu/libg.a
+         /usr/lib/x86_64-linux-gnu/libm*.a
+         /usr/lib/x86_64-linux-gnu/libnsl.a
+         /usr/lib/x86_64-linux-gnu/libpthread.a
+         /usr/lib/x86_64-linux-gnu/libresolv.a
+         /usr/lib/x86_64-linux-gnu/librpcsvc.a
+         /usr/lib/x86_64-linux-gnu/librt.a
+         /usr/lib/x86_64-linux-gnu/libutil.a
     - swift build -c release -Xswiftc -static-executable
     - mv .build/release/Run Polinpin
   artifacts:
